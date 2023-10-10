@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import "./App.css";
+import UserGuessForm from "./UserGuessForm";
+import SearchResults from "./SearchResults";
 
 const TIMEOUT_DURATION_MS = 8000;
 
@@ -89,65 +91,17 @@ function App() {
     <div className="App container-fluid p-3">
       <div className="row">
         <div className="col-5">
-          <form className="d-grid gap-3" onSubmit={handleSubmitGuess}>
-            <label htmlFor="user-guess">
-              <h4>
-                What's the minimum number of link clicks to get from the{" "}
-                <a href={startingURL} target="_blank" rel="noopener noreferrer">
-                  {startingTitle}{" "}
-                  <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                </a>{" "}
-                Wikipedia page to the{" "}
-                <a
-                  href={BASE_URL + KEVIN_BACON_TITLE}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Kevin Bacon
-                  <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                </a>{" "}
-                Wikipedia page?
-              </h4>
-            </label>
-
-            <input
-              type="number"
-              name="userGuess"
-              className="form-control"
-              id="user-guess"
-              required
-            />
-            <button type="submit" className="btn btn-primary">
-              Submit Guess
-            </button>
-          </form>
-
-          <div className="py-3 px-1">
-            {userGuess && <p>You guessed: {userGuess}</p>}
-
-            {userGuess && path.length === 0 && <p>Searching...</p>}
-            {timedOut && <p>Timed out before finishing search.</p>}
-
-            {path.length > 0 && (
-              <div>
-                <h4>Answer:</h4>
-                <p>{`Number of link hops: ${path.length - 1}`}</p>
-                <span>{"Shortest path to get there: "}</span>
-                {path.map((link: string) => (
-                  <li>{link}</li>
-                ))}
-              </div>
-            )}
-
-            {(timedOut || path.length > 0) && (
-              <button
-                onClick={() => window.location.reload()}
-                className="btn btn-primary m-3"
-              >
-                Try another one
-              </button>
-            )}
-          </div>
+          <UserGuessForm
+            onSubmit={handleSubmitGuess}
+            startingURL={startingURL}
+            startingTitle={startingTitle}
+            endingURL={BASE_URL + KEVIN_BACON_TITLE}
+          />
+          <SearchResults
+            userGuess={userGuess}
+            path={path}
+            timedOut={timedOut}
+          />
         </div>
         <div className="col">
           <div className="container-fluid">
