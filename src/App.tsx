@@ -37,7 +37,6 @@ function App() {
   const KEVIN_BACON_TITLE = "Kevin_Bacon";
   const GET_RANDOM_TITLE_URL =
     "https://en.wikipedia.org/api/rest_v1/page/random/title";
-  const SERVERLESS_FUNCTION_PATH = "/.netlify/functions/path-finder";
 
   const [path, setPath] = useState<string[]>([]);
   const [startingTitle, setStartingTitle] = useState("");
