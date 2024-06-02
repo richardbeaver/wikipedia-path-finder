@@ -1,30 +1,32 @@
 import os
 import sys
 from flask import Flask, abort
+from flask_cors import CORS
 from dotenv import load_dotenv
 from wikipedia_crawler import WikipediaCrawler
 
 
 load_dotenv()
-BACKEND_PORT = os.getenv("BACKEND_PORT")
-if BACKEND_PORT is None:
+VITE_BACKEND_PORT = os.getenv("VITE_BACKEND_PORT")
+if VITE_BACKEND_PORT is None:
     print("No BACKEND_PORT environment variable in .env. Exiting...")
     sys.exit()
 
 
 app = Flask(__name__)
+CORS(app)
 
 
 @app.route("/<starting_page>", methods=["GET"])
 def crawl(starting_page: str):
-    min_hops = WikipediaCrawler(starting_page).get_min_hops()
+    path = WikipediaCrawler(starting_page).crawl()
     result = {
         "starting_page": starting_page,
     }
-    if min_hops is None:
-        result["result"] = "Could not reach Kevin Bacon"
+    if path is None:
+        result["result"] = ["Could not reach Kevin Bacon"]
     else:
-        result["result"] = str(min_hops)
+        result["result"] = path
 
     return result
 
@@ -35,4 +37,4 @@ def handle_favicon():
 
 
 if __name__ == "__main__":
-    app.run(port=int(BACKEND_PORT))
+    app.run(port=int(VITE_BACKEND_PORT))

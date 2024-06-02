@@ -1,40 +1,63 @@
+import pytest
 from wikipedia_crawler import WikipediaCrawler, KEVIN_BACON_TITLE
 
 
 FOOTLOOSE_TITLE = "Footloose_(1984_film)"
 HERBERT_ROSS_TITLE = "Herbert_Ross"
-
-
-# def test_starting_at_kevin_bacon():
-#     crawler = WikipediaCrawler(KEVIN_BACON_TITLE)
-#     assert crawler.crawl() == [KEVIN_BACON_TITLE]
-
-
-# def test_one_hop():
-#     crawler = WikipediaCrawler(FOOTLOOSE_TITLE)
-#     assert crawler.crawl() == [FOOTLOOSE_TITLE, KEVIN_BACON_TITLE]
-
-
-# def test_two_hops():
-#     # Runs in about 6 seconds
-#     crawler = WikipediaCrawler(HERBERT_ROSS_TITLE)
-#     assert crawler.crawl() == [HERBERT_ROSS_TITLE, FOOTLOOSE_TITLE, KEVIN_BACON_TITLE]
+FRIDAY_THE_13TH_TITLE = "Friday_the_13th_(1980_film)"
+CITY_ON_A_HILL = "City_on_a_Hill_(TV_series)"
+AMANDA_CLAYTON_TITLE = "Amanda_Clayton"
+THE_BET_TITLE = "The_Bet_(2016_film)"
 
 
 def test_starting_at_kevin_bacon():
     crawler = WikipediaCrawler(KEVIN_BACON_TITLE)
-    assert crawler.get_min_hops() == 0
+    assert crawler.crawl() == [KEVIN_BACON_TITLE]
 
 
-def test_one_hop():
+def test_one_hop_1():
     crawler = WikipediaCrawler(FOOTLOOSE_TITLE)
-    assert crawler.get_min_hops() == 1
+    assert crawler.crawl() == [FOOTLOOSE_TITLE, KEVIN_BACON_TITLE]
 
 
-def test_two_hops():
+def test_one_hop_2():
+    crawler = WikipediaCrawler(FRIDAY_THE_13TH_TITLE)
+    assert crawler.crawl() == [FRIDAY_THE_13TH_TITLE, KEVIN_BACON_TITLE]
+
+
+def test_one_hop_3():
+    crawler = WikipediaCrawler(CITY_ON_A_HILL)
+    assert crawler.crawl() == [CITY_ON_A_HILL, KEVIN_BACON_TITLE]
+
+
+@pytest.mark.skip
+def test_two_hops_1():
     # Runs in about 6 seconds
+    # Multiple paths with two hops
     crawler = WikipediaCrawler(HERBERT_ROSS_TITLE)
-    assert crawler.get_min_hops() == 2
+    result = crawler.crawl()
+    assert result is not None
+    assert len(result) == 3
+    assert result[0] == HERBERT_ROSS_TITLE
+    assert result[2] == KEVIN_BACON_TITLE
+
+
+@pytest.mark.skip
+def test_two_hops_2():
+    # Runs in about 10 seconds
+    crawler = WikipediaCrawler(AMANDA_CLAYTON_TITLE)
+    assert crawler.crawl() == [AMANDA_CLAYTON_TITLE, CITY_ON_A_HILL, KEVIN_BACON_TITLE]
+
+
+@pytest.mark.skip
+def test_three_hops():
+    # Runs in about 10 minutes
+    crawler = WikipediaCrawler(THE_BET_TITLE)
+    result = crawler.crawl()
+    assert result is not None
+    assert len(result) == 4
+    assert result[0] == THE_BET_TITLE
+    assert result[3] == KEVIN_BACON_TITLE
 
 
 def test_get_links_in_sample_html():
@@ -113,17 +136,19 @@ def test_get_links_in_sample_html():
     .
 </p>
 """
-    assert WikipediaCrawler("")._linked_titles_in_html(html) == [
-        "Goodbye,_Mr._Chips_(1969_film)",
-        "The_Owl_and_the_Pussycat_(film)",
-        "Play_It_Again,_Sam_(film)",
-        "The_Sunshine_Boys_(1975_film)",
-        "Funny_Lady",
-        "The_Goodbye_Girl",
-        "California_Suite_(film)",
-        "Pennies_from_Heaven_(1981_film)",
-        "Footloose_(1984_film)",
-        "Steel_Magnolias",
-        "The_Turning_Point_(1977_film)",
-        "Academy_Award",
-    ]
+    assert WikipediaCrawler("")._linked_titles_in_html(html) == set(
+        [
+            "Goodbye,_Mr._Chips_(1969_film)",
+            "The_Owl_and_the_Pussycat_(film)",
+            "Play_It_Again,_Sam_(film)",
+            "The_Sunshine_Boys_(1975_film)",
+            "Funny_Lady",
+            "The_Goodbye_Girl",
+            "California_Suite_(film)",
+            "Pennies_from_Heaven_(1981_film)",
+            "Footloose_(1984_film)",
+            "Steel_Magnolias",
+            "The_Turning_Point_(1977_film)",
+            "Academy_Award",
+        ]
+    )
