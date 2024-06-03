@@ -30,9 +30,9 @@ def test_one_hop_3():
     assert crawler.crawl() == [CITY_ON_A_HILL, KEVIN_BACON_TITLE]
 
 
-@pytest.mark.skip
+# @pytest.mark.skip
 def test_two_hops_1():
-    # Runs in about 6 seconds
+    # Runs in about 10 seconds
     # Multiple paths with two hops
     crawler = WikipediaCrawler(HERBERT_ROSS_TITLE)
     result = crawler.crawl()
@@ -42,7 +42,7 @@ def test_two_hops_1():
     assert result[2] == KEVIN_BACON_TITLE
 
 
-@pytest.mark.skip
+# @pytest.mark.skip
 def test_two_hops_2():
     # Runs in about 10 seconds
     crawler = WikipediaCrawler(AMANDA_CLAYTON_TITLE)
