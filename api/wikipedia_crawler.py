@@ -66,7 +66,6 @@ class WikipediaCrawler:
 
         return linked_titles
 
-    # Single parent version
     def _get_path(
         self,
     ) -> deque[str] | None:
@@ -77,58 +76,3 @@ class WikipediaCrawler:
             path.appendleft(parent)
 
         return path
-
-    # "set of parents" version
-    # def _get_path_rec(
-    #     self,
-    #     # next_parent: str,
-    #     starting_path: deque[str] | None = None,
-    # ) -> deque[str] | None:
-    #     # if len(starting_path) == 0:
-    #     #     if next_parent is not KEVIN_BACON_TITLE:
-    #     #         raise ValueError(
-    #     #             "First title must be kevin bacon title if starting path is empty"
-    #     #         )
-
-    #     assert starting_path is None or starting_path[-1] == KEVIN_BACON_TITLE
-
-    #     if starting_path is None:
-    #         starting_path = deque([KEVIN_BACON_TITLE])
-
-    #     cur_title = starting_path[0]
-
-    #     # if next_parent == self.start:
-    #     #     starting_path.appendleft(next_parent)
-    #     #     return starting_path
-
-    #     parents = self.parents[cur_title]
-    #     if len(parents) == 0:
-    #         return None
-
-    #     # shortest_path: deque[str] | None = None
-    #     shortest_path_parent: str | None = None
-
-    #     # starting_path.appendleft(next_parent)
-    #     for parent in parents:
-    #         starting_path.appendleft(parent)
-    #         new_path = self._get_path(starting_path)
-    #         starting_path.popleft(parent)
-
-    #         if new_path is None:
-    #             continue
-
-    #         # if shortest_path is None or len(new_path) < len(shortest_path):
-    #         #     shortest_path = new_path
-
-    #     if shortest_path is None:
-    #         return None
-
-    #     return shortest_path
-
-
-if __name__ == "__main__":
-    FOOTLOOSE_TITLE = "Footloose_(1984_film)"
-    HERBERT_ROSS_TITLE = "Herbert_Ross"
-
-    crawler = WikipediaCrawler(HERBERT_ROSS_TITLE)
-    assert crawler.crawl() == [HERBERT_ROSS_TITLE, FOOTLOOSE_TITLE, KEVIN_BACON_TITLE]
