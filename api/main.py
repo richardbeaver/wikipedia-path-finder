@@ -20,7 +20,7 @@ CORS(app)
 @app.route("/<starting_page>", methods=["GET"])
 def crawl(starting_page: str):
     path = WikipediaCrawler(starting_page).crawl()
-    result = {
+    result: dict[str, str | list[str]] = {
         "starting_page": starting_page,
     }
     if path is None:
