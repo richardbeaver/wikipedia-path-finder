@@ -38,10 +38,7 @@ class WikipediaCrawler:
                 self.parents[linked_title] = cur_title
 
                 if linked_title == KEVIN_BACON_TITLE:
-                    full_path = self._get_path()
-                    if full_path is None:
-                        return full_path
-                    return list(full_path)
+                    return self._get_path()
 
                 self.queue.append(linked_title)
                 self.seen.add(linked_title)
@@ -68,11 +65,12 @@ class WikipediaCrawler:
 
     def _get_path(
         self,
-    ) -> deque[str] | None:
-        path = deque([KEVIN_BACON_TITLE])
+    ) -> list[str]:
+        path = [KEVIN_BACON_TITLE]
 
-        while path[0] != self.start:
-            parent = self.parents[path[0]]
-            path.appendleft(parent)
+        while path[-1] != self.start:
+            parent = self.parents[path[-1]]
+            path.append(parent)
 
+        path.reverse()
         return path
