@@ -46,9 +46,9 @@ class WikipediaCrawler:
 
         return None
 
-    def _get_linked_titles(self, title: str) -> list[str]:
+    def _get_linked_titles(self, title: str) -> set[str]:
         html = requests.get(f"{GET_HTML_URL}/{title}", timeout=5).text
-        return list(self._linked_titles_in_html(html))
+        return self._linked_titles_in_html(html)
 
     def _linked_titles_in_html(self, html: str) -> set[str]:
         all_links = BeautifulSoup(html, "html.parser").find_all("a")
