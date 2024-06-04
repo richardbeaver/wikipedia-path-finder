@@ -19,8 +19,8 @@ function SearchResults({
           <h4>Answer:</h4>
           <p>{`Number of link hops: ${path.length - 1}`}</p>
           <span>{"Shortest path to get there: "}</span>
-          {path.map((link: string) => (
-            <li>{link}</li>
+          {path.map((link: string, i: number) => (
+            <li key={i}>{link}</li>
           ))}
         </div>
       )}
