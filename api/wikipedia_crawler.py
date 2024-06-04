@@ -15,7 +15,6 @@ class WikipediaCrawler:
 
     def __init__(self, starting_page_title: str):
         self.start: str = starting_page_title
-        self.seen: set[str] = set([starting_page_title])
         self.queue: deque[str] = deque([starting_page_title])
         self.parents: dict[str, str] = {}
 
@@ -32,7 +31,7 @@ class WikipediaCrawler:
             linked_titles = self._get_linked_titles(cur_title)
 
             for linked_title in linked_titles:
-                if linked_title in self.seen:
+                if linked_title in self.parents:
                     continue
 
                 self.parents[linked_title] = cur_title
@@ -41,7 +40,6 @@ class WikipediaCrawler:
                     return self._get_path()
 
                 self.queue.append(linked_title)
-                self.seen.add(linked_title)
                 visited_pages += 1
 
         return None
