@@ -11,8 +11,8 @@ test-crawler-py = "pytest"
 test-crawler-rs = "cargo test"
 test-all = [{ task = "test-crawler-py" }, { task = "test-crawler-rs" }]
 
-server-py = "python3 -m server_py.main"
-server-rs = "cargo run --manifest-path ./server_rs/Cargo.toml"
+server-py = "python3 -m servers.server_py.main"
+server-rs = "cargo run --manifest-path ./servers/server_rs/Cargo.toml"
 
 frontend = "npm --prefix frontend start"
 

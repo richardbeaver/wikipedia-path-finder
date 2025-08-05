@@ -1,5 +1,5 @@
 import pytest
-from crawler_py.crawler import WikipediaCrawler, KEVIN_BACON_TITLE
+from crawlers.crawler_py.crawler import WikipediaCrawler, KEVIN_BACON_TITLE
 
 FOOTLOOSE_TITLE = "Footloose_(1984_film)"
 HERBERT_ROSS_TITLE = "Herbert_Ross"
