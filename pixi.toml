@@ -7,6 +7,15 @@ version = "0.1.0"
 
 [tasks]
 
+test-crawler-py = "pytest"
+test-crawler-rs = "cargo test"
+test-all = [{ task = "test-crawler-py" }, { task = "test-crawler-rs" }]
+
+server-py = "python3 -m server_py.main"
+server-rs = "cargo run --manifest-path ./server_rs/Cargo.toml"
+
+frontend = "npm --prefix frontend start"
+
 [dependencies]
 pylint = ">=3.3.7,<4"
 pytest = ">=8.4.1,<9"
