@@ -135,7 +135,7 @@ def test_get_links_in_sample_html():
     .
 </p>
 """
-    assert WikipediaCrawler("")._linked_titles_in_html(html) == set(
+    assert WikipediaCrawler.linked_titles_in_html(html) == set(
         [
             "Goodbye,_Mr._Chips_(1969_film)",
             "The_Owl_and_the_Pussycat_(film)",
