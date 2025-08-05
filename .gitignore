@@ -1,28 +1,52 @@
-.env
-node_modules
-dist
-dist-ssr
-*.local
-venv
-__pycache__
-.pytest_cache
-
-# Logs
-logs
+# === Node / TypeScript / React ===
+node_modules/
+dist/
+build/
+.cache/
+.next/
+out/
 *.log
+*.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
+.env
+.env.*
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# === Rust ===
+*/target/
+**/*.rs.bk
+Cargo.lock
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+.Python
+*.sqlite3
+venv/
+env/
+ENV/
+pip-wheel-metadata/
+sitecustomize.py
+
+# === VS Code / JetBrains / Other Editors ===
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# === OS / Misc ===
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+*.swp
+*.bak
+*.tmp
