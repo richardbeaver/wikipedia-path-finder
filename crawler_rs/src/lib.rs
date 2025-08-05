@@ -33,7 +33,7 @@ impl WikipediaCrawler {
         let mut visited_pages = 0;
 
         while let Some(cur_title) = queue.pop_front() {
-            println!("visited {} pages", visited_pages);
+            println!("visited {visited_pages} pages");
 
             let linked_titles = self.get_linked_titles(&cur_title).await?;
 

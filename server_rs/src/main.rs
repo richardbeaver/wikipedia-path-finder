@@ -25,7 +25,7 @@ async fn main() {
     let host = ["127.0.0.1", &port].join(":");
     let listener = tokio::net::TcpListener::bind(&host).await.unwrap();
 
-    println!("Server running on port: {}", port);
+    println!("Server running on port: {port}");
     axum::serve(listener, app).await.unwrap();
 }
 
