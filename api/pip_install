@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-# Install package to virtual environment and update requirements file
-
-source venv/bin/activate
-python -m pip install $@
-pip freeze >requirements.txt
