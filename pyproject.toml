@@ -2,8 +2,12 @@
 typeCheckingMode = "strict"
 
 [tool.pylint.MAIN]
+init-hook = "import sys; sys.path.append('.')"
 disable = [
   "missing-module-docstring",
   "missing-class-docstring",
   "missing-function-docstring",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = "."

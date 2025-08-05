@@ -3,7 +3,7 @@ import sys
 from flask import Flask, abort
 from flask_cors import CORS
 from dotenv import load_dotenv
-from wikipedia_crawler import WikipediaCrawler
+from crawler_py.crawler import WikipediaCrawler
 
 
 load_dotenv()
