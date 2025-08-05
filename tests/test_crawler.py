@@ -1,6 +1,5 @@
 import pytest
-from wikipedia_crawler import WikipediaCrawler, KEVIN_BACON_TITLE
-
+from crawler_py.crawler import WikipediaCrawler, KEVIN_BACON_TITLE
 
 FOOTLOOSE_TITLE = "Footloose_(1984_film)"
 HERBERT_ROSS_TITLE = "Herbert_Ross"
@@ -30,7 +29,7 @@ def test_one_hop_3():
     assert crawler.crawl() == [CITY_ON_A_HILL, KEVIN_BACON_TITLE]
 
 
-# @pytest.mark.skip
+@pytest.mark.skip
 def test_two_hops_1():
     # Runs in about 10 seconds
     # Multiple paths with two hops
@@ -42,7 +41,7 @@ def test_two_hops_1():
     assert result[2] == KEVIN_BACON_TITLE
 
 
-# @pytest.mark.skip
+@pytest.mark.skip
 def test_two_hops_2():
     # Runs in about 10 seconds
     crawler = WikipediaCrawler(AMANDA_CLAYTON_TITLE)

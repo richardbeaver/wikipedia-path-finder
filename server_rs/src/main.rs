@@ -1,12 +1,10 @@
-mod wikipedia_crawler;
-
 use axum::extract::Path;
 use axum::{response::Json, routing::get, Router};
+use crawler_rs::WikipediaCrawler;
 use dotenvy::dotenv;
 use http::Method;
 use serde_json::{json, Value};
 use tower_http::cors::{Any, CorsLayer};
-use wikipedia_crawler::WikipediaCrawler;
 
 #[tokio::main]
 async fn main() {
