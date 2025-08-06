@@ -12,12 +12,19 @@ pub struct WikipediaCrawler {
 }
 
 impl WikipediaCrawler {
+    #[must_use]
     pub fn new(starting_page_title: &str) -> Self {
         Self {
             start: starting_page_title.to_string(),
         }
     }
 
+    /// Execute the main crawl process.
+    ///
+    /// # Errors
+    ///
+    /// This function errors if it fails to find a successful path after
+    /// exhausting all found links.
     pub async fn crawl(&mut self) -> anyhow::Result<Vec<String>> {
         if self.start == KEVIN_BACON_TITLE {
             return Ok(vec![KEVIN_BACON_TITLE.to_string()]);
@@ -37,7 +44,7 @@ impl WikipediaCrawler {
 
             let linked_titles = self.get_linked_titles(&cur_title).await?;
 
-            for linked_title in linked_titles.into_iter() {
+            for linked_title in linked_titles {
                 if seen.contains(&linked_title) {
                     continue;
                 }
@@ -58,9 +65,14 @@ impl WikipediaCrawler {
         Err(anyhow::Error::msg("Could not find path to Kevin Bacon"))
     }
 
+    #[must_use]
     pub fn linked_titles_in_html(html: &str) -> HashSet<String> {
         let parsed = scraper::Html::parse_document(html);
-        let selector = Selector::parse("a").expect("Should be able to parse `a` elements");
+
+        let Ok(selector) = Selector::parse("a") else {
+            unreachable!("'a' is a valid HTML selector")
+        };
+
         let all_links = parsed.select(&selector);
 
         let mut linked_titles = HashSet::new();
