@@ -35,7 +35,9 @@ impl WikipediaCrawler {
         while let Some(cur_title) = queue.pop_front() {
             println!("visited {visited_pages} pages");
 
-            let linked_titles = self.get_linked_titles(&cur_title).await?;
+            let Ok(linked_titles) = self.get_linked_titles(&cur_title).await else {
+                continue;
+            };
 
             for linked_title in linked_titles.into_iter() {
                 if seen.contains(&linked_title) {
