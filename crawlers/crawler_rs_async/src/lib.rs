@@ -25,7 +25,7 @@ impl WikipediaCrawler {
     ///
     /// This function errors if it fails to find a successful path after
     /// exhausting all found links.
-    pub fn crawl(&mut self) -> anyhow::Result<Vec<String>> {
+    pub async fn crawl(&mut self) -> anyhow::Result<Vec<String>> {
         if self.start == KEVIN_BACON_TITLE {
             return Ok(vec![KEVIN_BACON_TITLE.to_string()]);
         }
@@ -42,7 +42,7 @@ impl WikipediaCrawler {
         while let Some(cur_title) = queue.pop_front() {
             println!("visited {visited_pages} pages");
 
-            let Ok(linked_titles) = Self::get_linked_titles(&cur_title) else {
+            let Ok(linked_titles) = Self::get_linked_titles(&cur_title).await else {
                 continue;
             };
 
@@ -86,9 +86,9 @@ impl WikipediaCrawler {
             .collect()
     }
 
-    fn get_linked_titles(title: &str) -> reqwest::Result<HashSet<String>> {
+    async fn get_linked_titles(title: &str) -> reqwest::Result<HashSet<String>> {
         let url = format!("{GET_HTML_URL}/{title}");
-        let html = reqwest::blocking::get(url)?.text()?;
+        let html = reqwest::get(url).await?.text().await?;
         Ok(Self::linked_titles_in_html(&html))
     }
 
