@@ -8,7 +8,7 @@ version = "0.1.0"
 [tasks]
 
 test-crawler-py = "pytest crawlers/crawler_py"
-test-crawler-rs = "cargo test --manifest-path ./crawlers/crawler_rs/Cargo.toml"
+test-crawler-rs-async = "cargo test --manifest-path ./crawlers/crawler_rs_async/Cargo.toml"
 test-all = [{ task = "test-crawler-py" }, { task = "test-crawler-rs" }]
 
 server-py = "python3 -m servers.server_py.main"

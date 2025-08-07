@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crawler_rs::{WikipediaCrawler, KEVIN_BACON_TITLE};
+use crawler_rs_async::{WikipediaCrawler, KEVIN_BACON_TITLE};
 
 const FOOTLOOSE_TITLE: &str = "Footloose_(1984_film)";
 const HERBERT_ROSS_TITLE: &str = "Herbert_Ross";
