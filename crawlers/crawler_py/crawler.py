@@ -1,7 +1,7 @@
 from collections import deque
+import re
 import requests
-from bs4 import BeautifulSoup
-
+from bs4 import BeautifulSoup, Tag
 
 GET_HTML_URL = "https://en.wikipedia.org/api/rest_v1/page/html"
 KEVIN_BACON_TITLE = "Kevin_Bacon"
@@ -46,17 +46,21 @@ class WikipediaCrawler:
 
     @staticmethod
     def linked_titles_in_html(html: str) -> set[str]:
-        all_links = BeautifulSoup(html, "html.parser").find_all("a")
+        def get_title(anchor_tag: Tag) -> str:
+            href: str | list[str] = anchor_tag["href"]
+            link = href if isinstance(href, str) else href[0]
+            return str(link)[len(ARTICLE_LINK_PREFIX) :]
 
-        linked_titles: set[str] = set()
-        for link in all_links:
-            href: str | None = link.get("href")
+        wiki_link_anchor_tags = BeautifulSoup(html, "html.parser").find_all(
+            # filter for href's that start with the artile link prefix
+            href=re.compile(f"^{ARTICLE_LINK_PREFIX}")
+        )
 
-            if href is not None and href.startswith(ARTICLE_LINK_PREFIX):
-                linked_title = href[len(ARTICLE_LINK_PREFIX) :]
-                linked_titles.add(linked_title)
-
-        return linked_titles
+        return set(
+            get_title(anchor_tag)
+            for anchor_tag in wiki_link_anchor_tags
+            if isinstance(anchor_tag, Tag)
+        )
 
     def _get_linked_titles(self, title: str) -> set[str]:
         html = requests.get(f"{GET_HTML_URL}/{title}", timeout=5).text
