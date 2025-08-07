@@ -42,7 +42,7 @@ impl WikipediaCrawler {
         while let Some(cur_title) = queue.pop_front() {
             println!("visited {visited_pages} pages");
 
-            let Ok(linked_titles) = self.get_linked_titles(&cur_title).await else {
+            let Ok(linked_titles) = Self::get_linked_titles(&cur_title).await else {
                 continue;
             };
 
@@ -86,7 +86,7 @@ impl WikipediaCrawler {
             .collect()
     }
 
-    async fn get_linked_titles(&self, title: &str) -> reqwest::Result<HashSet<String>> {
+    async fn get_linked_titles(title: &str) -> reqwest::Result<HashSet<String>> {
         let url = format!("{GET_HTML_URL}/{title}");
         let html = reqwest::get(url).await?.text().await?;
         Ok(Self::linked_titles_in_html(&html))

@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crawler_rs_async::{WikipediaCrawler, KEVIN_BACON_TITLE};
 
 const FOOTLOOSE_TITLE: &str = "Footloose_(1984_film)";
@@ -42,7 +40,7 @@ async fn one_hop_3() {
     );
 }
 
-#[ignore]
+#[ignore = "long execution time"]
 #[tokio::test]
 async fn two_hops_1() {
     // Runs in about 5-60 seconds
@@ -55,7 +53,7 @@ async fn two_hops_1() {
     assert_eq!(result.last().unwrap(), KEVIN_BACON_TITLE);
 }
 
-#[ignore]
+#[ignore = "long execution time"]
 #[tokio::test]
 async fn two_hops_2() {
     // Runs in about 5-20 seconds
@@ -66,7 +64,7 @@ async fn two_hops_2() {
     );
 }
 
-#[ignore]
+#[ignore = "long execution time"]
 #[tokio::test]
 async fn three_hops() {
     // Runs in about 1-7 minutes
@@ -154,25 +152,25 @@ async fn get_links_in_sample_html() {
         </a>
         .
       </p>"#;
+
     assert_eq!(
         WikipediaCrawler::linked_titles_in_html(html),
-        HashSet::from_iter(
-            [
-                "Goodbye,_Mr._Chips_(1969_film)",
-                "The_Owl_and_the_Pussycat_(film)",
-                "Play_It_Again,_Sam_(film)",
-                "The_Sunshine_Boys_(1975_film)",
-                "Funny_Lady",
-                "The_Goodbye_Girl",
-                "California_Suite_(film)",
-                "Pennies_from_Heaven_(1981_film)",
-                "Footloose_(1984_film)",
-                "Steel_Magnolias",
-                "The_Turning_Point_(1977_film)",
-                "Academy_Award",
-            ]
-            .map(String::from)
-            .into_iter()
-        )
+        [
+            "Goodbye,_Mr._Chips_(1969_film)",
+            "The_Owl_and_the_Pussycat_(film)",
+            "Play_It_Again,_Sam_(film)",
+            "The_Sunshine_Boys_(1975_film)",
+            "Funny_Lady",
+            "The_Goodbye_Girl",
+            "California_Suite_(film)",
+            "Pennies_from_Heaven_(1981_film)",
+            "Footloose_(1984_film)",
+            "Steel_Magnolias",
+            "The_Turning_Point_(1977_film)",
+            "Academy_Award",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect()
     );
 }
