@@ -46,22 +46,21 @@ class WikipediaCrawler:
 
     @staticmethod
     def linked_titles_in_html(html: str) -> set[str]:
+        def get_title(anchor_tag: Tag) -> str:
+            href: str | list[str] = anchor_tag["href"]
+            link = href if isinstance(href, str) else href[0]
+            return str(link)[len(ARTICLE_LINK_PREFIX) :]
+
         wiki_link_anchor_tags = BeautifulSoup(html, "html.parser").find_all(
             # filter for href's that start with the artile link prefix
             href=re.compile(f"^{ARTICLE_LINK_PREFIX}")
         )
 
-        linked_titles: set[str] = set()
-        for anchor_tag in wiki_link_anchor_tags:
-            if not isinstance(anchor_tag, Tag):
-                continue
-
-            href = anchor_tag["href"]
-            link = href if isinstance(href, str) else href[0]
-            title = str(link)[len(ARTICLE_LINK_PREFIX) :]
-            linked_titles.add(title)
-
-        return linked_titles
+        return set(
+            get_title(anchor_tag)
+            for anchor_tag in wiki_link_anchor_tags
+            if isinstance(anchor_tag, Tag)
+        )
 
     def _get_linked_titles(self, title: str) -> set[str]:
         html = requests.get(f"{GET_HTML_URL}/{title}", timeout=5).text

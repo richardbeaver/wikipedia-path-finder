@@ -69,23 +69,19 @@ impl WikipediaCrawler {
     pub fn linked_titles_in_html(html: &str) -> HashSet<String> {
         let parsed = scraper::Html::parse_document(html);
 
-        let Ok(selector) = Selector::parse("a") else {
+        let Ok(anchor_tags) = Selector::parse("a") else {
             unreachable!("'a' is a valid HTML selector")
         };
 
-        let all_links = parsed.select(&selector);
-
-        let mut linked_titles = HashSet::new();
-
-        for link in all_links {
-            if let Some(href) = link.value().attr("href") {
-                if let Some(linked_title) = href.strip_prefix(ARTICLE_LINK_PREFIX) {
-                    linked_titles.insert(linked_title.to_string());
-                }
-            }
-        }
-
-        linked_titles
+        parsed
+            .select(&anchor_tags)
+            .filter_map(|anchor_tag| {
+                anchor_tag
+                    .attr("href")
+                    .and_then(|link| link.strip_prefix(ARTICLE_LINK_PREFIX))
+            })
+            .map(String::from)
+            .collect()
     }
 
     async fn get_linked_titles(&self, title: &str) -> reqwest::Result<HashSet<String>> {
