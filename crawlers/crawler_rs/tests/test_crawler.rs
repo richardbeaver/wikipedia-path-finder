@@ -64,7 +64,7 @@ fn two_hops_2() {
     );
 }
 
-#[ignore = "long execution time"]
+#[ignore = "very long execution time"]
 #[test]
 fn three_hops() {
     // Runs in about 1-7 minutes
