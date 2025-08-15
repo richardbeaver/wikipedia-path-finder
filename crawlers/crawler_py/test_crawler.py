@@ -135,19 +135,17 @@ def test_get_links_in_sample_html():
     .
 </p>
 """
-    assert WikipediaCrawler.linked_titles_in_html(html) == set(
-        [
-            "Goodbye,_Mr._Chips_(1969_film)",
-            "The_Owl_and_the_Pussycat_(film)",
-            "Play_It_Again,_Sam_(film)",
-            "The_Sunshine_Boys_(1975_film)",
-            "Funny_Lady",
-            "The_Goodbye_Girl",
-            "California_Suite_(film)",
-            "Pennies_from_Heaven_(1981_film)",
-            "Footloose_(1984_film)",
-            "Steel_Magnolias",
-            "The_Turning_Point_(1977_film)",
-            "Academy_Award",
-        ]
-    )
+    assert WikipediaCrawler.linked_titles_in_html(html) == [
+        "Goodbye,_Mr._Chips_(1969_film)",
+        "The_Owl_and_the_Pussycat_(film)",
+        "Play_It_Again,_Sam_(film)",
+        "The_Sunshine_Boys_(1975_film)",
+        "Funny_Lady",
+        "The_Goodbye_Girl",
+        "California_Suite_(film)",
+        "Pennies_from_Heaven_(1981_film)",
+        "Footloose_(1984_film)",
+        "Steel_Magnolias",
+        "The_Turning_Point_(1977_film)",
+        "Academy_Award",
+    ]

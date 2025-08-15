@@ -45,7 +45,7 @@ class WikipediaCrawler:
         return None
 
     @staticmethod
-    def linked_titles_in_html(html: str) -> set[str]:
+    def linked_titles_in_html(html: str) -> list[str]:
         def get_title(anchor_tag: Tag) -> str:
             href: str | list[str] = anchor_tag["href"]
             link = href if isinstance(href, str) else href[0]
@@ -56,13 +56,13 @@ class WikipediaCrawler:
             href=re.compile(f"^{ARTICLE_LINK_PREFIX}")
         )
 
-        return set(
+        return [
             get_title(anchor_tag)
             for anchor_tag in wiki_link_anchor_tags
             if isinstance(anchor_tag, Tag)
-        )
+        ]
 
-    def _get_linked_titles(self, title: str) -> set[str]:
+    def _get_linked_titles(self, title: str) -> list[str]:
         html = requests.get(f"{GET_HTML_URL}/{title}", timeout=5).text
         return self.linked_titles_in_html(html)
 

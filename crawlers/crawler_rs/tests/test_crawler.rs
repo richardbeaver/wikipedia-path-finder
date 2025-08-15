@@ -171,6 +171,6 @@ fn get_links_in_sample_html() {
         ]
         .into_iter()
         .map(String::from)
-        .collect()
+        .collect::<Vec<_>>()
     );
 }

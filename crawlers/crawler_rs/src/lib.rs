@@ -68,7 +68,7 @@ impl WikipediaCrawler {
     }
 
     #[must_use]
-    pub fn linked_titles_in_html(html: &str) -> HashSet<String> {
+    pub fn linked_titles_in_html(html: &str) -> Vec<String> {
         let parsed = scraper::Html::parse_document(html);
 
         let Ok(anchor_tags) = Selector::parse("a") else {
@@ -86,7 +86,7 @@ impl WikipediaCrawler {
             .collect()
     }
 
-    fn get_linked_titles(title: &str) -> reqwest::Result<HashSet<String>> {
+    fn get_linked_titles(title: &str) -> reqwest::Result<Vec<String>> {
         let url = format!("{GET_HTML_URL}/{title}");
         let html = reqwest::blocking::get(url)?.text()?;
         Ok(Self::linked_titles_in_html(&html))
