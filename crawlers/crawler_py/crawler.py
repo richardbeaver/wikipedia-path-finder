@@ -15,31 +15,32 @@ class WikipediaCrawler:
 
     def __init__(self, starting_page_title: str):
         self.start: str = starting_page_title
-        self.queue: deque[str] = deque([starting_page_title])
-        self.parents: dict[str, str] = {}
 
     def crawl(self) -> list[str] | None:
         if self.start == KEVIN_BACON_TITLE:
             return [KEVIN_BACON_TITLE]
 
+        queue = deque([self.start])
+        parents: dict[str, str] = {}
+
         visited_pages = 0
 
-        while len(self.queue) != 0:
+        while len(queue) != 0:
             print(f"visited {visited_pages} pages")
 
-            cur_title = self.queue.popleft()
+            cur_title = queue.popleft()
             linked_titles = self._get_linked_titles(cur_title)
 
             for linked_title in linked_titles:
-                if linked_title in self.parents:
+                if linked_title in parents:
                     continue
 
-                self.parents[linked_title] = cur_title
+                parents[linked_title] = cur_title
 
                 if linked_title == KEVIN_BACON_TITLE:
-                    return self._get_path()
+                    return self._get_path(parents)
 
-                self.queue.append(linked_title)
+                queue.append(linked_title)
                 visited_pages += 1
 
         return None
@@ -66,13 +67,11 @@ class WikipediaCrawler:
         html = requests.get(f"{GET_HTML_URL}/{title}", timeout=5).text
         return self.linked_titles_in_html(html)
 
-    def _get_path(
-        self,
-    ) -> list[str]:
+    def _get_path(self, parents: dict[str, str]) -> list[str]:
         path = [KEVIN_BACON_TITLE]
 
         while path[-1] != self.start:
-            parent = self.parents[path[-1]]
+            parent = parents[path[-1]]
             path.append(parent)
 
         path.reverse()
