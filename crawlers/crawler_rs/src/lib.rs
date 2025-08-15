@@ -1,6 +1,6 @@
 use anyhow::Context;
 use scraper::Selector;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 
 const GET_HTML_URL: &str = "https://en.wikipedia.org/api/rest_v1/page/html";
 pub const KEVIN_BACON_TITLE: &str = "Kevin_Bacon";
@@ -30,12 +30,8 @@ impl WikipediaCrawler {
             return Ok(vec![KEVIN_BACON_TITLE.to_string()]);
         }
 
-        let mut seen = HashSet::new();
+        let mut queue = VecDeque::from([self.start.to_string()]);
         let mut parents = HashMap::new();
-
-        // OPTIMIZATION: start with a capacity?
-        let mut queue = VecDeque::new();
-        queue.push_back(self.start.to_string());
 
         let mut visited_pages = 0;
 
@@ -47,7 +43,7 @@ impl WikipediaCrawler {
             };
 
             for linked_title in linked_titles {
-                if seen.contains(&linked_title) {
+                if parents.contains_key(&linked_title) {
                     continue;
                 }
 
@@ -59,7 +55,6 @@ impl WikipediaCrawler {
                 }
 
                 queue.push_back(linked_title.to_string());
-                seen.insert(linked_title);
                 visited_pages += 1;
             }
         }
@@ -93,8 +88,7 @@ impl WikipediaCrawler {
     }
 
     fn get_path(&self, parents: &HashMap<String, String>) -> anyhow::Result<Vec<String>> {
-        let mut path = Vec::with_capacity(1);
-        path.push(KEVIN_BACON_TITLE.to_string());
+        let mut path = vec![KEVIN_BACON_TITLE.to_string()];
 
         while let Some(last) = path.last() {
             if last == &self.start {
