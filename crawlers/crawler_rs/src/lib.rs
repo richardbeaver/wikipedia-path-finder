@@ -33,12 +33,16 @@ impl WikipediaCrawler {
         let mut queue = VecDeque::from([self.start.to_string()]);
         let mut parents = HashMap::new();
 
+        let client = reqwest::blocking::Client::builder()
+            .build()
+            .context("Error creating http client")?;
+
         let mut visited_pages = 0;
 
         while let Some(cur_title) = queue.pop_front() {
             println!("visited {visited_pages} pages");
 
-            let Ok(linked_titles) = Self::get_linked_titles(&cur_title) else {
+            let Ok(linked_titles) = Self::get_linked_titles(&client, &cur_title) else {
                 continue;
             };
 
@@ -81,9 +85,12 @@ impl WikipediaCrawler {
             .collect()
     }
 
-    fn get_linked_titles(title: &str) -> reqwest::Result<Vec<String>> {
+    fn get_linked_titles(
+        client: &reqwest::blocking::Client,
+        title: &str,
+    ) -> reqwest::Result<Vec<String>> {
         let url = format!("{GET_HTML_URL}/{title}");
-        let html = reqwest::blocking::get(url)?.text()?;
+        let html = client.get(url).send()?.text()?;
         Ok(Self::linked_titles_in_html(&html))
     }
 
