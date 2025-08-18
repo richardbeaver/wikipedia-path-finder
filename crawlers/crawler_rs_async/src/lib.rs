@@ -1,11 +1,19 @@
 use anyhow::Context;
+use async_channel::{unbounded, Receiver, Sender};
 use scraper::Selector;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
+use tokio::{sync::watch, time};
 
 const GET_HTML_URL: &str = "https://en.wikipedia.org/api/rest_v1/page/html";
 pub const KEVIN_BACON_TITLE: &str = "Kevin_Bacon";
 // The returned html links to other articles by relative paths to their title
 const ARTICLE_LINK_PREFIX: &str = "./";
+
+const WORKER_COUNT: usize = 5;
 
 pub struct WikipediaCrawler {
     start: String,
@@ -25,50 +33,114 @@ impl WikipediaCrawler {
     ///
     /// This function errors if it fails to find a successful path after
     /// exhausting all found links.
+    ///
+    /// # Panics
+    ///
+    /// Panics if locking the mutex guard fails, which says that a previous
+    /// mutex holder panicked while holding the mutex
     pub async fn crawl(&mut self) -> anyhow::Result<Vec<String>> {
         if self.start == KEVIN_BACON_TITLE {
             return Ok(vec![KEVIN_BACON_TITLE.to_string()]);
         }
 
-        let mut seen = HashSet::new();
-        let mut parents = HashMap::new();
+        let (title_tx, title_rx) = unbounded();
+        let (stop_tx, mut stop_rx) = watch::channel(false);
 
-        // OPTIMIZATION: start with a capacity?
-        let mut queue = VecDeque::new();
-        queue.push_back(self.start.to_string());
+        let parents = Arc::new(Mutex::new(HashMap::new()));
+        let client = reqwest::Client::builder()
+            .build()
+            .context("Error creating http client")?;
 
-        let mut visited_pages = 0;
+        let mut handles = vec![];
 
-        while let Some(cur_title) = queue.pop_front() {
-            println!("visited {visited_pages} pages");
+        title_tx
+            .send(self.start.to_string())
+            .await
+            .context("Error sending starting title through channel")?;
 
-            let Ok(linked_titles) = Self::get_linked_titles(&cur_title).await else {
+        for id in 0..WORKER_COUNT {
+            let title_tx = title_tx.clone();
+            let title_rx = title_rx.clone();
+            let stop_tx = stop_tx.clone();
+            let stop_rx = stop_rx.clone();
+            let parents = parents.clone();
+            let client = client.clone();
+
+            let handle = tokio::spawn(Self::worker(
+                id, title_tx, title_rx, stop_tx, stop_rx, parents, client,
+            ));
+
+            handles.push(handle);
+        }
+
+        drop(title_tx);
+        stop_rx.wait_for(|val| *val).await?;
+
+        println!("Crawl finished.");
+
+        let path = {
+            let p = parents.lock().unwrap();
+            self.get_path(&p)
+        };
+        println!("{:?}", path.as_ref());
+
+        path.map_err(|_| anyhow::Error::msg("Could not find path to Kevin Bacon"))
+    }
+
+    async fn worker(
+        id: usize,
+        title_tx: Sender<String>,
+        title_rx: Receiver<String>,
+        stop_tx: watch::Sender<bool>,
+        stop_rx: watch::Receiver<bool>,
+        parents: Arc<Mutex<HashMap<String, String>>>,
+        client: reqwest::Client,
+    ) {
+        loop {
+            if *stop_rx.borrow() {
+                println!("[Worker {id}] stopping");
+                return;
+            }
+
+            let Ok(cur_title) = title_rx.recv().await else {
+                break;
+            };
+
+            println!("[Worker {id}] Crawling {cur_title}");
+
+            let Ok(linked_titles) = Self::get_linked_titles(client.clone(), &cur_title).await
+            else {
+                println!("Failed to get linked titles");
                 continue;
             };
 
-            for linked_title in linked_titles {
-                if seen.contains(&linked_title) {
-                    continue;
-                }
+            println!("[Worker {id}] got linked titles");
+            println!("length: {}", linked_titles.len());
 
-                parents.insert(linked_title.to_string(), cur_title.to_string());
+            for linked_title in linked_titles {
+                {
+                    let mut p = parents.lock().unwrap();
+                    if p.contains_key(&linked_title) {
+                        continue;
+                    }
+                    p.insert(linked_title.to_string(), cur_title.to_string());
+                }
 
                 if linked_title == KEVIN_BACON_TITLE {
-                    let path = self.get_path(&parents)?;
-                    return Ok(path);
+                    println!("[Worker {id}] Found target");
+                    let _ = stop_tx.send(true);
+                    return;
                 }
 
-                queue.push_back(linked_title.to_string());
-                seen.insert(linked_title);
-                visited_pages += 1;
+                let _ = title_tx.send(linked_title).await;
             }
         }
 
-        Err(anyhow::Error::msg("Could not find path to Kevin Bacon"))
+        println!("[Worker {id}] exiting");
     }
 
     #[must_use]
-    pub fn linked_titles_in_html(html: &str) -> HashSet<String> {
+    pub fn linked_titles_in_html(html: &str) -> Vec<String> {
         let parsed = scraper::Html::parse_document(html);
 
         let Ok(anchor_tags) = Selector::parse("a") else {
@@ -86,15 +158,22 @@ impl WikipediaCrawler {
             .collect()
     }
 
-    async fn get_linked_titles(title: &str) -> reqwest::Result<HashSet<String>> {
+    async fn get_linked_titles(
+        client: reqwest::Client,
+        title: &str,
+    ) -> anyhow::Result<Vec<String>> {
         let url = format!("{GET_HTML_URL}/{title}");
-        let html = reqwest::get(url).await?.text().await?;
+
+        let html = time::timeout(Duration::from_secs(5), client.get(url).send())
+            .await??
+            .text()
+            .await?;
+
         Ok(Self::linked_titles_in_html(&html))
     }
 
     fn get_path(&self, parents: &HashMap<String, String>) -> anyhow::Result<Vec<String>> {
-        let mut path = Vec::with_capacity(1);
-        path.push(KEVIN_BACON_TITLE.to_string());
+        let mut path = vec![KEVIN_BACON_TITLE.to_string()];
 
         while let Some(last) = path.last() {
             if last == &self.start {
