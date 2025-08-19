@@ -28,28 +28,27 @@ fn one_hop_3() {
     assert_eq!(crawler.crawl().unwrap(), vec![CITY_ON_A_HILL, KEVIN_BACON]);
 }
 
-#[ignore = "long execution time"]
 #[test]
 fn two_hops_1() {
-    // Runs in about 5-60 seconds
-    // Multiple paths with two hops
+    let mut crawler = WikipediaCrawler::new(AMANDA_CLAYTON).unwrap();
+    assert_eq!(
+        crawler.crawl().unwrap(),
+        vec![AMANDA_CLAYTON, CITY_ON_A_HILL, KEVIN_BACON]
+    );
+}
+
+#[ignore = "long execution time"]
+#[test]
+fn two_hops_2() {
+    // Runs in about 10 seconds
+    // Triggers Action API's chunked responses with `continue` field
+    //   - Faulty handling of this field results in a failure
     let mut crawler = WikipediaCrawler::new(HERBERT_ROSS).unwrap();
     let result = crawler.crawl().unwrap();
 
     assert_eq!(result.len(), 3);
     assert_eq!(result.first().unwrap(), HERBERT_ROSS);
     assert_eq!(result.last().unwrap(), KEVIN_BACON);
-}
-
-#[ignore = "long execution time"]
-#[test]
-fn two_hops_2() {
-    // Runs in about 5-20 seconds
-    let mut crawler = WikipediaCrawler::new(AMANDA_CLAYTON).unwrap();
-    assert_eq!(
-        crawler.crawl().unwrap(),
-        vec![AMANDA_CLAYTON, CITY_ON_A_HILL, KEVIN_BACON]
-    );
 }
 
 #[ignore = "very long execution time"]

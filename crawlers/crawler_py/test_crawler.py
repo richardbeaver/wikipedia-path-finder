@@ -35,23 +35,22 @@ def test_one_hop_3():
     assert crawler.crawl() == [CITY_ON_A_HILL, KEVIN_BACON]
 
 
-@pytest.mark.skip
 def test_two_hops_1():
+    crawler = WikipediaCrawler(AMANDA_CLAYTON)
+    assert crawler.crawl() == [AMANDA_CLAYTON, CITY_ON_A_HILL, KEVIN_BACON]
+
+
+@pytest.mark.skip
+def test_two_hops_2():
     # Runs in about 10 seconds
-    # Multiple paths with two hops
+    # Triggers Action API's chunked responses with `continue` field
+    #   - Faulty handling of this field results in a failure
     crawler = WikipediaCrawler(HERBERT_ROSS)
     result = crawler.crawl()
     assert result is not None
     assert len(result) == 3
     assert result[0] == HERBERT_ROSS
     assert result[2] == KEVIN_BACON
-
-
-@pytest.mark.skip
-def test_two_hops_2():
-    # Runs in about 10 seconds
-    crawler = WikipediaCrawler(AMANDA_CLAYTON)
-    assert crawler.crawl() == [AMANDA_CLAYTON, CITY_ON_A_HILL, KEVIN_BACON]
 
 
 @pytest.mark.skip
