@@ -2,9 +2,9 @@ from collections import deque
 import re
 import requests
 from bs4 import BeautifulSoup, Tag
+from titles.titles import KEVIN_BACON
 
 GET_HTML_URL = "https://en.wikipedia.org/api/rest_v1/page/html"
-KEVIN_BACON_TITLE = "Kevin_Bacon"
 # The returned html links to other articles by relative paths to their title
 ARTICLE_LINK_PREFIX = "./"
 
@@ -17,8 +17,8 @@ class WikipediaCrawler:
         self.start: str = starting_page_title
 
     def crawl(self) -> list[str] | None:
-        if self.start == KEVIN_BACON_TITLE:
-            return [KEVIN_BACON_TITLE]
+        if self.start == KEVIN_BACON:
+            return [KEVIN_BACON]
 
         queue = deque([self.start])
         parents: dict[str, str] = {}
@@ -37,7 +37,7 @@ class WikipediaCrawler:
 
                 parents[linked_title] = cur_title
 
-                if linked_title == KEVIN_BACON_TITLE:
+                if linked_title == KEVIN_BACON:
                     return self._get_path(parents)
 
                 queue.append(linked_title)
@@ -68,7 +68,7 @@ class WikipediaCrawler:
         return self.linked_titles_in_html(html)
 
     def _get_path(self, parents: dict[str, str]) -> list[str]:
-        path = [KEVIN_BACON_TITLE]
+        path = [KEVIN_BACON]
 
         while path[-1] != self.start:
             parent = parents[path[-1]]

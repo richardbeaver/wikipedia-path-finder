@@ -1,62 +1,64 @@
 import pytest
-from crawlers.crawler_py.crawler import WikipediaCrawler, KEVIN_BACON_TITLE
-
-FOOTLOOSE_TITLE = "Footloose_(1984_film)"
-HERBERT_ROSS_TITLE = "Herbert_Ross"
-FRIDAY_THE_13TH_TITLE = "Friday_the_13th_(1980_film)"
-CITY_ON_A_HILL = "City_on_a_Hill_(TV_series)"
-AMANDA_CLAYTON_TITLE = "Amanda_Clayton"
-THE_BET_TITLE = "The_Bet_(2016_film)"
+from crawlers.crawler_py.crawler import WikipediaCrawler
+from titles.titles import (
+    KEVIN_BACON,
+    FOOTLOOSE,
+    HERBERT_ROSS,
+    FRIDAY_THE_13TH,
+    CITY_ON_A_HILL,
+    AMANDA_CLAYTON,
+    THE_BET,
+)
 
 
 def test_starting_at_kevin_bacon():
-    crawler = WikipediaCrawler(KEVIN_BACON_TITLE)
-    assert crawler.crawl() == [KEVIN_BACON_TITLE]
+    crawler = WikipediaCrawler(KEVIN_BACON)
+    assert crawler.crawl() == [KEVIN_BACON]
 
 
 def test_one_hop_1():
-    crawler = WikipediaCrawler(FOOTLOOSE_TITLE)
-    assert crawler.crawl() == [FOOTLOOSE_TITLE, KEVIN_BACON_TITLE]
+    crawler = WikipediaCrawler(FOOTLOOSE)
+    assert crawler.crawl() == [FOOTLOOSE, KEVIN_BACON]
 
 
 def test_one_hop_2():
-    crawler = WikipediaCrawler(FRIDAY_THE_13TH_TITLE)
-    assert crawler.crawl() == [FRIDAY_THE_13TH_TITLE, KEVIN_BACON_TITLE]
+    crawler = WikipediaCrawler(FRIDAY_THE_13TH)
+    assert crawler.crawl() == [FRIDAY_THE_13TH, KEVIN_BACON]
 
 
 def test_one_hop_3():
     crawler = WikipediaCrawler(CITY_ON_A_HILL)
-    assert crawler.crawl() == [CITY_ON_A_HILL, KEVIN_BACON_TITLE]
+    assert crawler.crawl() == [CITY_ON_A_HILL, KEVIN_BACON]
 
 
 @pytest.mark.skip
 def test_two_hops_1():
     # Runs in about 10 seconds
     # Multiple paths with two hops
-    crawler = WikipediaCrawler(HERBERT_ROSS_TITLE)
+    crawler = WikipediaCrawler(HERBERT_ROSS)
     result = crawler.crawl()
     assert result is not None
     assert len(result) == 3
-    assert result[0] == HERBERT_ROSS_TITLE
-    assert result[2] == KEVIN_BACON_TITLE
+    assert result[0] == HERBERT_ROSS
+    assert result[2] == KEVIN_BACON
 
 
 @pytest.mark.skip
 def test_two_hops_2():
     # Runs in about 10 seconds
-    crawler = WikipediaCrawler(AMANDA_CLAYTON_TITLE)
-    assert crawler.crawl() == [AMANDA_CLAYTON_TITLE, CITY_ON_A_HILL, KEVIN_BACON_TITLE]
+    crawler = WikipediaCrawler(AMANDA_CLAYTON)
+    assert crawler.crawl() == [AMANDA_CLAYTON, CITY_ON_A_HILL, KEVIN_BACON]
 
 
 @pytest.mark.skip
 def test_three_hops():
     # Runs in about 10 minutes
-    crawler = WikipediaCrawler(THE_BET_TITLE)
+    crawler = WikipediaCrawler(THE_BET)
     result = crawler.crawl()
     assert result is not None
     assert len(result) == 4
-    assert result[0] == THE_BET_TITLE
-    assert result[3] == KEVIN_BACON_TITLE
+    assert result[0] == THE_BET
+    assert result[3] == KEVIN_BACON
 
 
 def test_get_links_in_sample_html():
