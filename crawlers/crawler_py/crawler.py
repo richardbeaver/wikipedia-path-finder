@@ -1,20 +1,19 @@
+import os
 from collections import deque
-import re
+from dotenv import load_dotenv
 import requests
-from bs4 import BeautifulSoup, Tag
 from titles.titles import KEVIN_BACON
-
-GET_HTML_URL = "https://en.wikipedia.org/api/rest_v1/page/html"
-# The returned html links to other articles by relative paths to their title
-ARTICLE_LINK_PREFIX = "./"
 
 
 class WikipediaCrawler:
-
-    # Fields of crawler only contain Wikipedia article titles
-
     def __init__(self, starting_page_title: str):
-        self.start: str = starting_page_title
+        load_dotenv()
+        contact = os.getenv("CONTACT")
+        user_agent = f"MyWikiCrawler ({contact})"
+
+        self.start = starting_page_title
+        self.session = requests.Session()
+        self.session.headers.update({"User-Agent": user_agent})
 
     def crawl(self) -> list[str] | None:
         if self.start == KEVIN_BACON:
@@ -29,7 +28,7 @@ class WikipediaCrawler:
             print(f"visited {visited_pages} pages")
 
             cur_title = queue.popleft()
-            linked_titles = self._get_linked_titles(cur_title)
+            linked_titles = self.get_linked_titles(cur_title)
 
             for linked_title in linked_titles:
                 if linked_title in parents:
@@ -45,27 +44,45 @@ class WikipediaCrawler:
 
         return None
 
-    @staticmethod
-    def linked_titles_in_html(html: str) -> list[str]:
-        def get_title(anchor_tag: Tag) -> str:
-            href: str | list[str] = anchor_tag["href"]
-            link = href if isinstance(href, str) else href[0]
-            return str(link)[len(ARTICLE_LINK_PREFIX) :]
+    def get_linked_titles(self, title: str) -> list[str]:
+        url = "https://en.wikipedia.org/w/api.php"
+        params = {
+            "action": "query",
+            "titles": title,
+            "prop": "links",
+            "pllimit": "max",
+            "format": "json",
+        }
 
-        wiki_link_anchor_tags = BeautifulSoup(html, "html.parser").find_all(
-            # filter for href's that start with the artile link prefix
-            href=re.compile(f"^{ARTICLE_LINK_PREFIX}")
-        )
+        linked_titles: list[str] = []
+        while True:
+            response = self.session.get(url, params=params, timeout=5)
 
-        return [
-            get_title(anchor_tag)
-            for anchor_tag in wiki_link_anchor_tags
-            if isinstance(anchor_tag, Tag)
-        ]
+            if response.status_code != 200:
+                raise RuntimeError(
+                    f"HTTP error {response.status_code} for page '{title}'"
+                )
 
-    def _get_linked_titles(self, title: str) -> list[str]:
-        html = requests.get(f"{GET_HTML_URL}/{title}", timeout=5).text
-        return self.linked_titles_in_html(html)
+            try:
+                response = response.json()
+            except ValueError as e:
+                raise RuntimeError(
+                    f"Failed to decode JSON for page '{title}': {e}"
+                ) from e
+
+            pages = response["query"]["pages"]
+
+            for _page_id, page_data in pages.items():
+                links = page_data.get("links", [])
+                linked_titles.extend(link["title"] for link in links if link["ns"] == 0)
+
+            # Handle continuation
+            if "continue" in response:
+                params.update(response["continue"])
+            else:
+                break
+
+        return linked_titles
 
     def _get_path(self, parents: dict[str, str]) -> list[str]:
         path = [KEVIN_BACON]
