@@ -1,9 +1,9 @@
 use anyhow::Context;
 use scraper::Selector;
 use std::collections::{HashMap, VecDeque};
+use titles::KEVIN_BACON;
 
 const GET_HTML_URL: &str = "https://en.wikipedia.org/api/rest_v1/page/html";
-pub const KEVIN_BACON_TITLE: &str = "Kevin_Bacon";
 // The returned html links to other articles by relative paths to their title
 const ARTICLE_LINK_PREFIX: &str = "./";
 
@@ -26,8 +26,8 @@ impl WikipediaCrawler {
     /// This function errors if it fails to find a successful path after
     /// exhausting all found links.
     pub fn crawl(&mut self) -> anyhow::Result<Vec<String>> {
-        if self.start == KEVIN_BACON_TITLE {
-            return Ok(vec![KEVIN_BACON_TITLE.to_string()]);
+        if self.start == KEVIN_BACON {
+            return Ok(vec![KEVIN_BACON.to_string()]);
         }
 
         let mut queue = VecDeque::from([self.start.to_string()]);
@@ -53,7 +53,7 @@ impl WikipediaCrawler {
 
                 parents.insert(linked_title.to_string(), cur_title.to_string());
 
-                if linked_title == KEVIN_BACON_TITLE {
+                if linked_title == KEVIN_BACON {
                     let path = self.get_path(&parents)?;
                     return Ok(path);
                 }
@@ -95,7 +95,7 @@ impl WikipediaCrawler {
     }
 
     fn get_path(&self, parents: &HashMap<String, String>) -> anyhow::Result<Vec<String>> {
-        let mut path = vec![KEVIN_BACON_TITLE.to_string()];
+        let mut path = vec![KEVIN_BACON.to_string()];
 
         while let Some(last) = path.last() {
             if last == &self.start {
