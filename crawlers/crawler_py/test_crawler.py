@@ -8,6 +8,10 @@ from titles.titles import (
     CITY_ON_A_HILL,
     AMANDA_CLAYTON,
     THE_BET,
+    GT5,
+    GINETTA_GT5_CHALLENGE,
+    GRAN_TURISMO_5,
+    GRAN_TURISMO_5_PROLOGUE,
 )
 
 
@@ -62,8 +66,8 @@ def test_three_hops():
 
 
 def test_get_linked_titles():
-    assert WikipediaCrawler("").get_linked_titles("GT5") == [
-        "Ginetta GT5 Challenge",
-        "Gran Turismo 5",
-        "Gran Turismo 5 Prologue",
+    assert WikipediaCrawler("").get_linked_titles(GT5) == [
+        GINETTA_GT5_CHALLENGE,
+        GRAN_TURISMO_5,
+        GRAN_TURISMO_5_PROLOGUE,
     ]
