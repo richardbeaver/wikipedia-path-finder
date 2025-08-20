@@ -21,13 +21,21 @@ class WikipediaCrawler:
         queue = deque([start_title])
         parents: dict[str, str] = {}
 
-        visited_pages = 0
+        found = False
 
         while len(queue) != 0:
-            print(f"visited {visited_pages} pages")
-
             cur_title = queue.popleft()
-            linked_titles = self.get_linked_titles(cur_title)
+            print(f"Crawling {cur_title}")
+
+            try:
+                linked_titles = self.get_linked_titles(cur_title)
+            except RuntimeError as e:
+                print(f"Failed to get linked titles for page '{cur_title}': {e}")
+                continue
+
+            print(
+                f"Got linked titles for page '{cur_title}'; length: {len(linked_titles)}"
+            )
 
             for linked_title in linked_titles:
                 if linked_title in parents:
@@ -36,12 +44,21 @@ class WikipediaCrawler:
                 parents[linked_title] = cur_title
 
                 if linked_title == KEVIN_BACON:
-                    return self._get_path(start_title, parents)
+                    found = True
+                    print("Found target")
+                    break
 
                 queue.append(linked_title)
-                visited_pages += 1
 
-        return None
+            if found:
+                break
+
+        print("Crawl finished.")
+
+        path = self._get_path(start_title, parents)
+        print(f"{path=}")
+
+        return path
 
     def get_linked_titles(self, title: str) -> list[str]:
         url = "https://en.wikipedia.org/w/api.php"
