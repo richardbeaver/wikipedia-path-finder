@@ -1,30 +1,44 @@
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use async_channel::{unbounded, Receiver, Sender};
-use scraper::Selector;
+use dotenvy::dotenv;
+use reqwest::Client;
 use std::{
     collections::HashMap,
+    env,
     sync::{Arc, Mutex},
-    time::Duration,
 };
-use tokio::{sync::watch, time};
-
-const GET_HTML_URL: &str = "https://en.wikipedia.org/api/rest_v1/page/html";
-pub const KEVIN_BACON_TITLE: &str = "Kevin_Bacon";
-// The returned html links to other articles by relative paths to their title
-const ARTICLE_LINK_PREFIX: &str = "./";
+use titles::KEVIN_BACON;
+use tokio::{sync::watch, time::Duration};
+use wiki_response::WikiResponse;
 
 const WORKER_COUNT: usize = 5;
 
+#[derive(Clone)]
 pub struct WikipediaCrawler {
-    start: String,
+    client: Client,
 }
 
 impl WikipediaCrawler {
-    #[must_use]
-    pub fn new(starting_page_title: &str) -> Self {
-        Self {
-            start: starting_page_title.to_string(),
-        }
+    /// Create a new instance of an object to search pages
+    ///
+    /// # Errors
+    ///
+    /// `new` errors if:
+    ///   - The environment variable `CONTACT` cannot be found (used to create
+    ///     user agent for http requests)
+    ///   - There is an error encountered while creating the http client
+    pub fn new() -> anyhow::Result<Self> {
+        dotenv().ok();
+        let contact = env::var("CONTACT")?;
+        let user_agent = format!("MyWikiCrawler ({contact})");
+
+        let client = Client::builder()
+            .user_agent(user_agent)
+            .timeout(Duration::from_secs(5))
+            .build()
+            .context("Error creating http client")?;
+
+        Ok(Self { client })
     }
 
     /// Execute the main crawl process.
@@ -38,36 +52,31 @@ impl WikipediaCrawler {
     ///
     /// Panics if locking the mutex guard fails, which says that a previous
     /// mutex holder panicked while holding the mutex
-    pub async fn crawl(&mut self) -> anyhow::Result<Vec<String>> {
-        if self.start == KEVIN_BACON_TITLE {
-            return Ok(vec![KEVIN_BACON_TITLE.to_string()]);
+    pub async fn crawl(&self, start_title: &str) -> anyhow::Result<Vec<String>> {
+        if start_title == KEVIN_BACON {
+            return Ok(vec![KEVIN_BACON.to_string()]);
         }
 
         let (title_tx, title_rx) = unbounded();
         let (stop_tx, mut stop_rx) = watch::channel(false);
 
         let parents = Arc::new(Mutex::new(HashMap::new()));
-        let client = reqwest::Client::builder()
-            .build()
-            .context("Error creating http client")?;
 
         let mut handles = vec![];
 
         title_tx
-            .send(self.start.to_string())
+            .send(start_title.to_string())
             .await
             .context("Error sending starting title through channel")?;
 
         for id in 0..WORKER_COUNT {
-            let title_tx = title_tx.clone();
-            let title_rx = title_rx.clone();
-            let stop_tx = stop_tx.clone();
-            let stop_rx = stop_rx.clone();
-            let parents = parents.clone();
-            let client = client.clone();
-
-            let handle = tokio::spawn(Self::worker(
-                id, title_tx, title_rx, stop_tx, stop_rx, parents, client,
+            let handle = tokio::spawn(self.clone().worker(
+                id,
+                title_tx.clone(),
+                title_rx.clone(),
+                stop_tx.clone(),
+                stop_rx.clone(),
+                parents.clone(),
             ));
 
             handles.push(handle);
@@ -80,7 +89,7 @@ impl WikipediaCrawler {
 
         let path = {
             let p = parents.lock().unwrap();
-            self.get_path(&p)
+            Self::get_path(start_title, &p)
         };
         println!("{:?}", path.as_ref());
 
@@ -88,13 +97,13 @@ impl WikipediaCrawler {
     }
 
     async fn worker(
+        self,
         id: usize,
         title_tx: Sender<String>,
         title_rx: Receiver<String>,
         stop_tx: watch::Sender<bool>,
         stop_rx: watch::Receiver<bool>,
         parents: Arc<Mutex<HashMap<String, String>>>,
-        client: reqwest::Client,
     ) {
         loop {
             if *stop_rx.borrow() {
@@ -108,8 +117,7 @@ impl WikipediaCrawler {
 
             println!("[Worker {id}] Crawling {cur_title}");
 
-            let Ok(linked_titles) = Self::get_linked_titles(client.clone(), &cur_title).await
-            else {
+            let Ok(linked_titles) = self.get_linked_titles(&cur_title).await else {
                 println!("Failed to get linked titles");
                 continue;
             };
@@ -126,7 +134,7 @@ impl WikipediaCrawler {
                     p.insert(linked_title.to_string(), cur_title.to_string());
                 }
 
-                if linked_title == KEVIN_BACON_TITLE {
+                if linked_title == KEVIN_BACON {
                     println!("[Worker {id}] Found target");
                     let _ = stop_tx.send(true);
                     return;
@@ -139,44 +147,74 @@ impl WikipediaCrawler {
         println!("[Worker {id}] exiting");
     }
 
-    #[must_use]
-    pub fn linked_titles_in_html(html: &str) -> Vec<String> {
-        let parsed = scraper::Html::parse_document(html);
+    /// Collect all titles linked to in the article with the given title.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if:
+    ///   - Any http request fails
+    ///   - Any http response status is not within 200-299
+    ///   - Returned JSON is invalid or otherwise not decodable
+    pub async fn get_linked_titles(&self, title: &str) -> anyhow::Result<Vec<String>> {
+        let url = "https://en.wikipedia.org/w/api.php";
+        let mut params = vec![
+            ("action".to_string(), "query".to_string()),
+            ("titles".to_string(), title.to_string()),
+            ("prop".to_string(), "links".to_string()),
+            ("pllimit".to_string(), "max".to_string()),
+            ("format".to_string(), "json".to_string()),
+        ];
 
-        let Ok(anchor_tags) = Selector::parse("a") else {
-            unreachable!("'a' is a valid HTML selector")
-        };
+        let mut linked_titles = Vec::new();
 
-        parsed
-            .select(&anchor_tags)
-            .filter_map(|anchor_tag| {
-                anchor_tag
-                    .attr("href")
-                    .and_then(|link| link.strip_prefix(ARTICLE_LINK_PREFIX))
-            })
-            .map(String::from)
-            .collect()
+        loop {
+            let resp = self
+                .client
+                .get(url)
+                .query(&params)
+                .send()
+                .await
+                .map_err(|e| anyhow!("HTTP request failed: {}", e))?;
+
+            if !resp.status().is_success() {
+                return Err(anyhow!("HTTP error {} for page '{}'", resp.status(), title));
+            }
+
+            let wiki_resp: WikiResponse = resp
+                .json()
+                .await
+                .map_err(|e| anyhow!("Failed to decode JSON for page '{}': {}", title, e))?;
+
+            for page in wiki_resp.query.pages.values() {
+                if let Some(links) = &page.links {
+                    linked_titles.extend(
+                        links
+                            .iter()
+                            .filter(|link| link.ns == 0)
+                            .map(|link| link.title.clone()),
+                    );
+                }
+            }
+
+            // Handle continuation
+            if let Some(cont) = wiki_resp.continuation {
+                params.extend(cont.iter().map(|(k, v)| (k.clone(), v.to_string())));
+            } else {
+                break;
+            }
+        }
+
+        Ok(linked_titles)
     }
 
-    async fn get_linked_titles(
-        client: reqwest::Client,
-        title: &str,
+    fn get_path(
+        start_title: &str,
+        parents: &HashMap<String, String>,
     ) -> anyhow::Result<Vec<String>> {
-        let url = format!("{GET_HTML_URL}/{title}");
-
-        let html = time::timeout(Duration::from_secs(5), client.get(url).send())
-            .await??
-            .text()
-            .await?;
-
-        Ok(Self::linked_titles_in_html(&html))
-    }
-
-    fn get_path(&self, parents: &HashMap<String, String>) -> anyhow::Result<Vec<String>> {
-        let mut path = vec![KEVIN_BACON_TITLE.to_string()];
+        let mut path = vec![KEVIN_BACON.to_string()];
 
         while let Some(last) = path.last() {
-            if last == &self.start {
+            if last == start_title {
                 break;
             }
 
