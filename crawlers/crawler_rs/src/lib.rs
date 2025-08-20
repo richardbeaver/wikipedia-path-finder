@@ -12,7 +12,6 @@ use std::{
 use titles::KEVIN_BACON;
 
 pub struct WikipediaCrawler {
-    start: String,
     client: Client,
 }
 
@@ -25,7 +24,7 @@ impl WikipediaCrawler {
     ///   - The environment variable `CONTACT` cannot be found (used to create
     ///     user agent for http requests)
     ///   - There is an error encountered while creating the http client
-    pub fn new(starting_page_title: &str) -> anyhow::Result<Self> {
+    pub fn new() -> anyhow::Result<Self> {
         dotenv().ok();
         let contact = env::var("CONTACT")?;
         let user_agent = format!("MyWikiCrawler ({contact})");
@@ -36,10 +35,7 @@ impl WikipediaCrawler {
             .build()
             .context("Error creating http client")?;
 
-        Ok(Self {
-            start: starting_page_title.to_string(),
-            client,
-        })
+        Ok(Self { client })
     }
 
     /// Execute the main crawl process.
@@ -48,12 +44,12 @@ impl WikipediaCrawler {
     ///
     /// This function errors if it fails to find a successful path after
     /// exhausting all found links.
-    pub fn crawl(&mut self) -> anyhow::Result<Vec<String>> {
-        if self.start == KEVIN_BACON {
+    pub fn crawl(&self, start_title: &str) -> anyhow::Result<Vec<String>> {
+        if start_title == KEVIN_BACON {
             return Ok(vec![KEVIN_BACON.to_string()]);
         }
 
-        let mut queue = VecDeque::from([self.start.to_string()]);
+        let mut queue = VecDeque::from([start_title.to_string()]);
         let mut parents = HashMap::new();
 
         let mut visited_pages = 0;
@@ -73,7 +69,7 @@ impl WikipediaCrawler {
                 parents.insert(linked_title.to_string(), cur_title.to_string());
 
                 if linked_title == KEVIN_BACON {
-                    let path = self.get_path(&parents)?;
+                    let path = Self::get_path(start_title, &parents)?;
                     return Ok(path);
                 }
 
@@ -143,11 +139,14 @@ impl WikipediaCrawler {
         Ok(linked_titles)
     }
 
-    fn get_path(&self, parents: &HashMap<String, String>) -> anyhow::Result<Vec<String>> {
+    fn get_path(
+        start_title: &str,
+        parents: &HashMap<String, String>,
+    ) -> anyhow::Result<Vec<String>> {
         let mut path = vec![KEVIN_BACON.to_string()];
 
         while let Some(last) = path.last() {
-            if last == &self.start {
+            if last == start_title {
                 break;
             }
 

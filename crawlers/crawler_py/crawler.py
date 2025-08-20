@@ -6,20 +6,19 @@ from titles.titles import KEVIN_BACON
 
 
 class WikipediaCrawler:
-    def __init__(self, starting_page_title: str):
+    def __init__(self):
         load_dotenv()
         contact = os.getenv("CONTACT")
         user_agent = f"MyWikiCrawler ({contact})"
 
-        self.start = starting_page_title
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": user_agent})
 
-    def crawl(self) -> list[str] | None:
-        if self.start == KEVIN_BACON:
+    def crawl(self, start_title: str) -> list[str] | None:
+        if start_title == KEVIN_BACON:
             return [KEVIN_BACON]
 
-        queue = deque([self.start])
+        queue = deque([start_title])
         parents: dict[str, str] = {}
 
         visited_pages = 0
@@ -37,7 +36,7 @@ class WikipediaCrawler:
                 parents[linked_title] = cur_title
 
                 if linked_title == KEVIN_BACON:
-                    return self._get_path(parents)
+                    return self._get_path(start_title, parents)
 
                 queue.append(linked_title)
                 visited_pages += 1
@@ -84,10 +83,11 @@ class WikipediaCrawler:
 
         return linked_titles
 
-    def _get_path(self, parents: dict[str, str]) -> list[str]:
+    @staticmethod
+    def _get_path(start_title: str, parents: dict[str, str]) -> list[str]:
         path = [KEVIN_BACON]
 
-        while path[-1] != self.start:
+        while path[-1] != start_title:
             parent = parents[path[-1]]
             path.append(parent)
 

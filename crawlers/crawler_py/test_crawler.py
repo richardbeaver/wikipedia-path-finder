@@ -15,38 +15,42 @@ from titles.titles import (
 )
 
 
-def test_starting_at_kevin_bacon():
-    crawler = WikipediaCrawler(KEVIN_BACON)
-    assert crawler.crawl() == [KEVIN_BACON]
+@pytest.fixture(name="crawler", scope="module")
+def create_crawler():
+    """Provide a WikipediaCrawler instance for all tests in this module."""
+    return WikipediaCrawler()
 
 
-def test_one_hop_1():
-    crawler = WikipediaCrawler(FOOTLOOSE)
-    assert crawler.crawl() == [FOOTLOOSE, KEVIN_BACON]
+def test_starting_at_kevin_bacon(crawler: WikipediaCrawler):
+    assert crawler.crawl(KEVIN_BACON) == [KEVIN_BACON]
 
 
-def test_one_hop_2():
-    crawler = WikipediaCrawler(FRIDAY_THE_13TH)
-    assert crawler.crawl() == [FRIDAY_THE_13TH, KEVIN_BACON]
+def test_one_hop_1(crawler: WikipediaCrawler):
+    assert crawler.crawl(FOOTLOOSE) == [FOOTLOOSE, KEVIN_BACON]
 
 
-def test_one_hop_3():
-    crawler = WikipediaCrawler(CITY_ON_A_HILL)
-    assert crawler.crawl() == [CITY_ON_A_HILL, KEVIN_BACON]
+def test_one_hop_2(crawler: WikipediaCrawler):
+    assert crawler.crawl(FRIDAY_THE_13TH) == [FRIDAY_THE_13TH, KEVIN_BACON]
 
 
-def test_two_hops_1():
-    crawler = WikipediaCrawler(AMANDA_CLAYTON)
-    assert crawler.crawl() == [AMANDA_CLAYTON, CITY_ON_A_HILL, KEVIN_BACON]
+def test_one_hop_3(crawler: WikipediaCrawler):
+    assert crawler.crawl(CITY_ON_A_HILL) == [CITY_ON_A_HILL, KEVIN_BACON]
+
+
+def test_two_hops_1(crawler: WikipediaCrawler):
+    assert crawler.crawl(AMANDA_CLAYTON) == [
+        AMANDA_CLAYTON,
+        CITY_ON_A_HILL,
+        KEVIN_BACON,
+    ]
 
 
 @pytest.mark.skip
-def test_two_hops_2():
+def test_two_hops_2(crawler: WikipediaCrawler):
     # Runs in about 10 seconds
     # Triggers Action API's chunked responses with `continue` field
     #   - Faulty handling of this field results in a failure
-    crawler = WikipediaCrawler(HERBERT_ROSS)
-    result = crawler.crawl()
+    result = crawler.crawl(HERBERT_ROSS)
     assert result is not None
     assert len(result) == 3
     assert result[0] == HERBERT_ROSS
@@ -54,18 +58,17 @@ def test_two_hops_2():
 
 
 @pytest.mark.skip
-def test_three_hops():
+def test_three_hops(crawler: WikipediaCrawler):
     # Runs in about 10 minutes
-    crawler = WikipediaCrawler(THE_BET)
-    result = crawler.crawl()
+    result = crawler.crawl(THE_BET)
     assert result is not None
     assert len(result) == 4
     assert result[0] == THE_BET
     assert result[3] == KEVIN_BACON
 
 
-def test_get_linked_titles():
-    assert WikipediaCrawler("").get_linked_titles(GT5) == [
+def test_get_linked_titles(crawler: WikipediaCrawler):
+    assert crawler.get_linked_titles(GT5) == [
         GINETTA_GT5_CHALLENGE,
         GRAN_TURISMO_5,
         GRAN_TURISMO_5_PROLOGUE,
