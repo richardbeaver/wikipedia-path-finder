@@ -164,13 +164,13 @@ impl WikipediaCrawler {
     ///   - Returned JSON is invalid or otherwise not decodable
     pub async fn get_linked_titles(&self, title: &str) -> anyhow::Result<Vec<String>> {
         let url = "https://en.wikipedia.org/w/api.php";
-        let mut params = vec![
+        let mut params = HashMap::from([
             ("action".to_string(), "query".to_string()),
             ("titles".to_string(), title.to_string()),
             ("prop".to_string(), "links".to_string()),
             ("pllimit".to_string(), "max".to_string()),
             ("format".to_string(), "json".to_string()),
-        ];
+        ]);
 
         let mut linked_titles = Vec::new();
 
