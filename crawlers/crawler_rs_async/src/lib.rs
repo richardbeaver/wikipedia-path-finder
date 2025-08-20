@@ -208,7 +208,7 @@ impl WikipediaCrawler {
 
             // Handle continuation
             if let Some(cont) = wiki_resp.continuation {
-                params.extend(cont.iter().map(|(k, v)| (k.clone(), v.clone())));
+                params.extend(cont);
             } else {
                 break;
             }
