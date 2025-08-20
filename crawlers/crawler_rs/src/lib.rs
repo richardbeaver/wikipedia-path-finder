@@ -27,7 +27,7 @@ impl WikipediaCrawler {
         let contact = env::var("CONTACT")?;
         let user_agent = format!("MyWikiCrawler ({contact})");
 
-        let client = reqwest::blocking::Client::builder()
+        let client = Client::builder()
             .user_agent(user_agent)
             .timeout(Duration::from_secs(5))
             .build()
