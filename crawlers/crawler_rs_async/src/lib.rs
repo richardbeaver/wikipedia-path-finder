@@ -117,13 +117,20 @@ impl WikipediaCrawler {
 
             println!("[Worker {id}] Crawling {cur_title}");
 
-            let Ok(linked_titles) = self.get_linked_titles(&cur_title).await else {
-                println!("Failed to get linked titles");
-                continue;
+            let linked_titles = match self.get_linked_titles(&cur_title).await {
+                Ok(linked_titles) => linked_titles,
+                Err(e) => {
+                    println!(
+                        "[Worker {id}] Failed to get linked titles for page '{cur_title}': {e}"
+                    );
+                    continue;
+                }
             };
 
-            println!("[Worker {id}] got linked titles");
-            println!("length: {}", linked_titles.len());
+            println!(
+                "[Worker {id}] Got linked titles for page '{cur_title}'; length: {}",
+                linked_titles.len()
+            );
 
             for linked_title in linked_titles {
                 {
@@ -180,9 +187,12 @@ impl WikipediaCrawler {
                 return Err(anyhow!("HTTP error {} for page '{}'", resp.status(), title));
             }
 
-            let wiki_resp: WikiResponse = resp
-                .json()
+            let body_text = resp
+                .text()
                 .await
+                .map_err(|e| anyhow!("Failed to read response body for '{}': {}", title, e))?;
+
+            let wiki_resp: WikiResponse = serde_json::from_str(&body_text)
                 .map_err(|e| anyhow!("Failed to decode JSON for page '{}': {}", title, e))?;
 
             for page in wiki_resp.query.pages.values() {
@@ -198,7 +208,7 @@ impl WikipediaCrawler {
 
             // Handle continuation
             if let Some(cont) = wiki_resp.continuation {
-                params.extend(cont.iter().map(|(k, v)| (k.clone(), v.to_string())));
+                params.extend(cont.iter().map(|(k, v)| (k.clone(), v.clone())));
             } else {
                 break;
             }
