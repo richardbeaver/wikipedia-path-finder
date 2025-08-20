@@ -1,6 +1,3 @@
-mod wiki_response;
-
-use crate::wiki_response::WikiResponse;
 use anyhow::{anyhow, Context};
 use dotenvy::dotenv;
 use reqwest::blocking::Client;
@@ -10,6 +7,7 @@ use std::{
     time::Duration,
 };
 use titles::KEVIN_BACON;
+use wiki_response::WikiResponse;
 
 pub struct WikipediaCrawler {
     client: Client,
