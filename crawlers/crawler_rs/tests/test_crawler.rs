@@ -1,6 +1,7 @@
 use std::sync::LazyLock;
 
 use crawler_rs::WikipediaCrawler;
+use std::sync::LazyLock;
 use titles::{
     AMANDA_CLAYTON, CITY_ON_A_HILL, FOOTLOOSE, FRIDAY_THE_13TH, GINETTA_GT5_CHALLENGE,
     GRAN_TURISMO_5, GRAN_TURISMO_5_PROLOGUE, GT5, HERBERT_ROSS, KEVIN_BACON, THE_BET,
