@@ -62,7 +62,7 @@ impl WikipediaCrawler {
 
         let (title_tx, title_rx) = unbounded();
         let (next_tx, next_rx) = unbounded();
-        let (stop_tx, mut stop_rx) = watch::channel(false);
+        let (stop_tx, stop_rx) = watch::channel(false);
         let barrier = Arc::new(Barrier::new(WORKER_COUNT + 1));
 
         let parents = Arc::new(Mutex::new(HashMap::new()));
@@ -126,16 +126,14 @@ impl WikipediaCrawler {
         let mut round = 0;
 
         loop {
-            if *stop_rx.borrow() {
-                println!("[Coordinator] Stopping");
-                return Ok(());
-            }
-
             barrier.wait().await; // Wait for workers for the round
             round += 1;
             println!("[Coordinator] End of round {round}");
 
-            println!("[Coordinator] Swapping titles");
+            if *stop_rx.borrow() {
+                println!("[Coordinator] Stopping");
+                return Ok(());
+            }
 
             // let next_frontier = next_rx.recv_blocking().into_iter().collect::<Vec<_>>();
             let mut next_frontier = vec![];
@@ -166,16 +164,16 @@ impl WikipediaCrawler {
         barrier: Arc<Barrier>,
     ) {
         loop {
-            if *stop_rx.borrow() {
-                println!("[Worker {id}] stopping");
-                return;
-            }
+            'this_round: loop {
+                if *stop_rx.borrow() {
+                    println!("[Worker {id}] stopping");
+                    break 'this_round;
+                }
 
-            // let Ok(cur_title) = title_rx.recv().await else {
-            //     break;
-            // };
+                let Ok(cur_title) = title_rx.try_recv() else {
+                    break 'this_round;
+                };
 
-            while let Ok(cur_title) = title_rx.try_recv() {
                 let linked_titles = match self.get_linked_titles(&cur_title).await {
                     Ok(linked_titles) => linked_titles,
                     Err(e) => {

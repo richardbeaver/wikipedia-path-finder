@@ -1,8 +1,9 @@
 use crawler_rs_async_channels::WikipediaCrawler;
 use std::sync::LazyLock;
 use titles::{
-    AMANDA_CLAYTON, CITY_ON_A_HILL, FOOTLOOSE, FRIDAY_THE_13TH, GINETTA_GT5_CHALLENGE,
-    GRAN_TURISMO_5, GRAN_TURISMO_5_PROLOGUE, GT5, HERBERT_ROSS, KEVIN_BACON, THE_BET,
+    AMANDA_CLAYTON, CITY_ON_A_HILL, CLINT_EASTWOOD, CURTIS_HANSON, FOOTLOOSE, FRIDAY_THE_13TH,
+    GINETTA_GT5_CHALLENGE, GRAN_TURISMO_5, GRAN_TURISMO_5_PROLOGUE, GT5, HERBERT_ROSS, KEVIN_BACON,
+    THE_BET,
 };
 
 static CRAWLER: LazyLock<WikipediaCrawler> = LazyLock::new(|| WikipediaCrawler::new().unwrap());
@@ -54,25 +55,28 @@ async fn two_hops_1() {
 #[ignore = "long execution time"]
 #[tokio::test]
 async fn two_hops_2() {
-    // Runs in about 10 seconds
-    // Triggers Action API's chunked responses with `continue` field
-    //   - Faulty handling of this field results in a failure
-    let result = CRAWLER.crawl(HERBERT_ROSS).await.unwrap();
+    // 1 worker  - 8.5-9s
+    // 5 workers - 2-2.5s
 
-    assert_eq!(result.len(), 3);
-    assert_eq!(result.first().unwrap(), HERBERT_ROSS);
-    assert_eq!(result.last().unwrap(), KEVIN_BACON);
+    let result = CRAWLER.crawl(HERBERT_ROSS).await.unwrap();
+    // This implementation seems to be sometimes ending with Curtis Hanson as
+    // the second name in the final path depending on the number of workers
+    assert!(
+        result == vec![HERBERT_ROSS, CURTIS_HANSON, KEVIN_BACON]
+            || result == vec![HERBERT_ROSS, CLINT_EASTWOOD, KEVIN_BACON]
+    );
 }
 
-#[ignore = "very long execution time"]
+#[ignore = "long execution time"]
 #[tokio::test]
 async fn three_hops() {
-    // Runs in about 1-7 minutes
-    let result = CRAWLER.crawl(THE_BET).await.unwrap();
+    // 1 worker  - 6-6.5s
+    // 5 workers - usually 1.5-2.5s, sometimes up to 5s
 
-    assert_eq!(result.len(), 4);
-    assert_eq!(result.first().unwrap(), THE_BET);
-    assert_eq!(result.last().unwrap(), KEVIN_BACON);
+    assert_eq!(
+        CRAWLER.crawl(THE_BET).await.unwrap(),
+        vec![THE_BET, AMANDA_CLAYTON, CITY_ON_A_HILL, KEVIN_BACON]
+    );
 }
 
 #[tokio::test]
