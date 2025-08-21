@@ -1,4 +1,4 @@
-use crawler_rs_async::WikipediaCrawler;
+use crawler_rs_async_channels::WikipediaCrawler;
 use std::sync::LazyLock;
 use titles::{
     AMANDA_CLAYTON, CITY_ON_A_HILL, CLINT_EASTWOOD, CURTIS_HANSON, FOOTLOOSE, FRIDAY_THE_13TH,
@@ -71,7 +71,7 @@ async fn two_hops_2() {
 #[tokio::test]
 async fn three_hops() {
     // 1 worker  - 6-6.5s
-    // 5 workers - 1.5-2s
+    // 5 workers - usually 1.5-2.5s, sometimes up to 5s
 
     assert_eq!(
         CRAWLER.crawl(THE_BET).await.unwrap(),

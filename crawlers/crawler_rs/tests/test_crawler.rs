@@ -1,9 +1,11 @@
 use std::sync::LazyLock;
 
 use crawler_rs::WikipediaCrawler;
+use std::sync::LazyLock;
 use titles::{
-    AMANDA_CLAYTON, CITY_ON_A_HILL, FOOTLOOSE, FRIDAY_THE_13TH, GINETTA_GT5_CHALLENGE,
-    GRAN_TURISMO_5, GRAN_TURISMO_5_PROLOGUE, GT5, HERBERT_ROSS, KEVIN_BACON, THE_BET,
+    AMANDA_CLAYTON, CITY_ON_A_HILL, CLINT_EASTWOOD, FOOTLOOSE, FRIDAY_THE_13TH,
+    GINETTA_GT5_CHALLENGE, GRAN_TURISMO_5, GRAN_TURISMO_5_PROLOGUE, GT5, HERBERT_ROSS, KEVIN_BACON,
+    THE_BET,
 };
 
 static CRAWLER: LazyLock<WikipediaCrawler> = LazyLock::new(|| WikipediaCrawler::new().unwrap());
@@ -48,25 +50,23 @@ fn two_hops_1() {
 #[ignore = "long execution time"]
 #[test]
 fn two_hops_2() {
-    // Runs in about 10 seconds
-    // Triggers Action API's chunked responses with `continue` field
-    //   - Faulty handling of this field results in a failure
-    let result = CRAWLER.crawl(HERBERT_ROSS).unwrap();
+    // Runs in 8.5-9s
 
-    assert_eq!(result.len(), 3);
-    assert_eq!(result.first().unwrap(), HERBERT_ROSS);
-    assert_eq!(result.last().unwrap(), KEVIN_BACON);
+    assert_eq!(
+        CRAWLER.crawl(HERBERT_ROSS).unwrap(),
+        vec![HERBERT_ROSS, CLINT_EASTWOOD, KEVIN_BACON]
+    );
 }
 
-#[ignore = "very long execution time"]
+#[ignore = "long execution time"]
 #[test]
 fn three_hops() {
-    // Runs in about 1-7 minutes
-    let result = CRAWLER.crawl(THE_BET).unwrap();
+    // Runs in 6-6.5s
 
-    assert_eq!(result.len(), 4);
-    assert_eq!(result.first().unwrap(), THE_BET);
-    assert_eq!(result.last().unwrap(), KEVIN_BACON);
+    assert_eq!(
+        CRAWLER.crawl(THE_BET).unwrap(),
+        vec![THE_BET, AMANDA_CLAYTON, CITY_ON_A_HILL, KEVIN_BACON]
+    );
 }
 
 #[test]

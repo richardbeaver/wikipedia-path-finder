@@ -1,8 +1,9 @@
 use anyhow::{anyhow, Context};
+use async_channel::{unbounded, Receiver, Sender};
 use dotenvy::dotenv;
 use reqwest::Client;
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::HashMap,
     env,
     sync::{Arc, Mutex},
 };
@@ -61,19 +62,23 @@ impl WikipediaCrawler {
             return Ok(vec![KEVIN_BACON.to_string()]);
         }
 
-        let frontier = Arc::new(Mutex::new(VecDeque::from([start_title.to_string()])));
-        let next_frontier = Arc::new(Mutex::new(VecDeque::new()));
-
+        let (title_tx, title_rx) = unbounded();
+        let (next_tx, next_rx) = unbounded();
         let (stop_tx, stop_rx) = watch::channel(false);
         let barrier = Arc::new(Barrier::new(self.worker_count as usize + 1));
 
         let parents = Arc::new(Mutex::new(HashMap::new()));
 
+        title_tx
+            .send(start_title.to_string())
+            .await
+            .context("Error sending starting title through channel")?;
+
         for id in 0..self.worker_count as usize {
             tokio::spawn(self.clone().worker(
                 id,
-                frontier.clone(),
-                next_frontier.clone(),
+                title_rx.clone(),
+                next_tx.clone(),
                 stop_tx.clone(),
                 stop_rx.clone(),
                 parents.clone(),
@@ -82,12 +87,11 @@ impl WikipediaCrawler {
         }
 
         // Wait for coordinator to exit
-        let Ok(Ok(())) =
-            tokio::spawn(
-                self.clone()
-                    .coordinator(frontier, next_frontier, stop_rx, barrier),
-            )
-            .await
+        let Ok(Ok(())) = tokio::spawn(
+            self.clone()
+                .coordinator(next_rx, title_tx, stop_rx, barrier),
+        )
+        .await
         else {
             println!("Coordinator failed");
             return Err(anyhow::Error::msg(""));
@@ -106,8 +110,8 @@ impl WikipediaCrawler {
 
     async fn coordinator(
         self,
-        frontier: Arc<Mutex<VecDeque<String>>>,
-        next_frontier: Arc<Mutex<VecDeque<String>>>,
+        next_rx: Receiver<String>,
+        title_tx: Sender<String>,
         stop_rx: watch::Receiver<bool>,
         barrier: Arc<Barrier>,
     ) -> anyhow::Result<()> {
@@ -123,15 +127,18 @@ impl WikipediaCrawler {
                 return Ok(());
             }
 
-            {
-                let mut nf = next_frontier.lock().unwrap();
-                println!("[Coordinator] Titles collected: {}", nf.len());
-                let mut f = frontier.lock().unwrap();
+            let mut next_frontier = vec![];
+            while let Ok(title) = next_rx.try_recv() {
+                next_frontier.push(title);
+            }
+            println!("[Coordinator] titles collected: {}", next_frontier.len());
 
-                f.extend(nf.drain(..));
+            for title in next_frontier {
+                title_tx.send(title).await?;
             }
 
             println!("[Coordinator] Starting next round");
+
             barrier.wait().await; // Start next round
         }
     }
@@ -140,8 +147,8 @@ impl WikipediaCrawler {
     async fn worker(
         self,
         id: usize,
-        frontier: Arc<Mutex<VecDeque<String>>>,
-        next_frontier: Arc<Mutex<VecDeque<String>>>,
+        title_rx: Receiver<String>,
+        next_tx: Sender<String>,
         stop_tx: watch::Sender<bool>,
         stop_rx: watch::Receiver<bool>,
         parents: Arc<Mutex<HashMap<String, String>>>,
@@ -154,7 +161,7 @@ impl WikipediaCrawler {
                     break 'this_round;
                 }
 
-                let Some(cur_title) = frontier.lock().unwrap().pop_front() else {
+                let Ok(cur_title) = title_rx.try_recv() else {
                     break 'this_round;
                 };
 
@@ -185,15 +192,14 @@ impl WikipediaCrawler {
                     if linked_title == KEVIN_BACON {
                         println!("[Worker {id}] Found target");
                         let _ = stop_tx.send(true);
-                        break 'this_round;
+                        break;
                     }
 
-                    next_frontier.lock().unwrap().push_back(linked_title);
+                    let _ = next_tx.send(linked_title).await;
                 }
             }
-
             barrier.wait().await; // round finished
-            barrier.wait().await; // wait for coordinator to swap queues
+            barrier.wait().await; // wait for coordinator to refill queue
         }
     }
 

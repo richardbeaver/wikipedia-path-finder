@@ -5,7 +5,7 @@ use std::collections::HashMap;
 pub struct WikiResponse {
     pub query: Query,
     #[serde(rename = "continue")]
-    pub continuation: Option<HashMap<String, serde_json::Value>>,
+    pub continuation: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Deserialize)]

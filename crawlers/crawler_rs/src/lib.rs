@@ -1,6 +1,3 @@
-mod wiki_response;
-
-use crate::wiki_response::WikiResponse;
 use anyhow::{anyhow, Context};
 use dotenvy::dotenv;
 use reqwest::blocking::Client;
@@ -10,6 +7,7 @@ use std::{
     time::Duration,
 };
 use titles::KEVIN_BACON;
+use wiki_response::WikiResponse;
 
 pub struct WikipediaCrawler {
     client: Client,
@@ -29,7 +27,7 @@ impl WikipediaCrawler {
         let contact = env::var("CONTACT")?;
         let user_agent = format!("MyWikiCrawler ({contact})");
 
-        let client = reqwest::blocking::Client::builder()
+        let client = Client::builder()
             .user_agent(user_agent)
             .timeout(Duration::from_secs(5))
             .build()
@@ -52,14 +50,19 @@ impl WikipediaCrawler {
         let mut queue = VecDeque::from([start_title.to_string()]);
         let mut parents = HashMap::new();
 
-        let mut visited_pages = 0;
-
-        while let Some(cur_title) = queue.pop_front() {
-            println!("visited {visited_pages} pages");
-
-            let Ok(linked_titles) = self.get_linked_titles(&cur_title) else {
-                continue;
+        'search: while let Some(cur_title) = queue.pop_front() {
+            let linked_titles = match self.get_linked_titles(&cur_title) {
+                Ok(linked_titles) => linked_titles,
+                Err(e) => {
+                    println!("Failed to get linked titles for page '{cur_title}': {e}");
+                    continue;
+                }
             };
+
+            println!(
+                "Got linked titles for page '{cur_title}'; length: {}",
+                linked_titles.len()
+            );
 
             for linked_title in linked_titles {
                 if parents.contains_key(&linked_title) {
@@ -69,16 +72,20 @@ impl WikipediaCrawler {
                 parents.insert(linked_title.to_string(), cur_title.to_string());
 
                 if linked_title == KEVIN_BACON {
-                    let path = Self::get_path(start_title, &parents)?;
-                    return Ok(path);
+                    println!("Found target");
+                    break 'search;
                 }
 
                 queue.push_back(linked_title.to_string());
-                visited_pages += 1;
             }
         }
 
-        Err(anyhow::Error::msg("Could not find path to Kevin Bacon"))
+        println!("Crawl finished.");
+
+        let path = Self::get_path(start_title, &parents);
+        println!("{:?}", path.as_ref());
+
+        path.map_err(|_| anyhow::Error::msg("Could not find path to Kevin Bacon"))
     }
 
     /// Collect all titles linked to in the article with the given title.
@@ -91,13 +98,13 @@ impl WikipediaCrawler {
     ///   - Returned JSON is invalid or otherwise not decodable
     pub fn get_linked_titles(&self, title: &str) -> anyhow::Result<Vec<String>> {
         let url = "https://en.wikipedia.org/w/api.php";
-        let mut params = vec![
+        let mut params = HashMap::from([
             ("action".to_string(), "query".to_string()),
             ("titles".to_string(), title.to_string()),
             ("prop".to_string(), "links".to_string()),
             ("pllimit".to_string(), "max".to_string()),
             ("format".to_string(), "json".to_string()),
-        ];
+        ]);
 
         let mut linked_titles = Vec::new();
 
@@ -113,8 +120,11 @@ impl WikipediaCrawler {
                 return Err(anyhow!("HTTP error {} for page '{}'", resp.status(), title));
             }
 
-            let wiki_resp: WikiResponse = resp
-                .json()
+            let body_text = resp
+                .text()
+                .map_err(|e| anyhow!("Failed to read response body for '{}': {}", title, e))?;
+
+            let wiki_resp: WikiResponse = serde_json::from_str(&body_text)
                 .map_err(|e| anyhow!("Failed to decode JSON for page '{}': {}", title, e))?;
 
             for page in wiki_resp.query.pages.values() {
@@ -130,7 +140,7 @@ impl WikipediaCrawler {
 
             // Handle continuation
             if let Some(cont) = wiki_resp.continuation {
-                params.extend(cont.iter().map(|(k, v)| (k.clone(), v.to_string())));
+                params.extend(cont);
             } else {
                 break;
             }
