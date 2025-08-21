@@ -67,15 +67,12 @@ impl WikipediaCrawler {
 
         let parents = Arc::new(Mutex::new(HashMap::new()));
 
-        // let mut handles = vec![];
-
         title_tx
             .send(start_title.to_string())
             .await
             .context("Error sending starting title through channel")?;
 
         for id in 0..WORKER_COUNT {
-            // let handle =
             tokio::spawn(self.clone().worker(
                 id,
                 title_rx.clone(),
@@ -85,13 +82,9 @@ impl WikipediaCrawler {
                 parents.clone(),
                 barrier.clone(),
             ));
-
-            // handles.push(handle);
         }
 
-        // wait for coordinator to exit
-        // tokio::spawn(self.clone().coordinator(next_rx, title_tx, barrier)).await??;
-
+        // Wait for coordinator to exit
         let Ok(Ok(())) = tokio::spawn(
             self.clone()
                 .coordinator(next_rx, title_tx, stop_rx, barrier),
@@ -101,9 +94,6 @@ impl WikipediaCrawler {
             println!("Coordinator failed");
             return Err(anyhow::Error::msg(""));
         };
-
-        // drop(title_tx);
-        // stop_rx.wait_for(|val| *val).await?;
 
         println!("Crawl finished.");
 
@@ -135,7 +125,6 @@ impl WikipediaCrawler {
                 return Ok(());
             }
 
-            // let next_frontier = next_rx.recv_blocking().into_iter().collect::<Vec<_>>();
             let mut next_frontier = vec![];
             while let Ok(title) = next_rx.try_recv() {
                 next_frontier.push(title);
