@@ -6,7 +6,7 @@ use titles::{
     THE_BET,
 };
 
-static CRAWLER: LazyLock<WikipediaCrawler> = LazyLock::new(|| WikipediaCrawler::new().unwrap());
+static CRAWLER: LazyLock<WikipediaCrawler> = LazyLock::new(|| WikipediaCrawler::new(5).unwrap());
 
 #[tokio::test]
 async fn starting_at_kevin_bacon() {

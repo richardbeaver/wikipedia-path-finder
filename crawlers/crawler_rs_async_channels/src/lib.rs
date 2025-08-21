@@ -14,11 +14,10 @@ use tokio::{
 };
 use wiki_response::WikiResponse;
 
-const WORKER_COUNT: usize = 5;
-
 #[derive(Clone)]
 pub struct WikipediaCrawler {
     client: Client,
+    worker_count: u8,
 }
 
 impl WikipediaCrawler {
@@ -30,7 +29,7 @@ impl WikipediaCrawler {
     ///   - The environment variable `CONTACT` cannot be found (used to create
     ///     user agent for http requests)
     ///   - There is an error encountered while creating the http client
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new(worker_count: u8) -> anyhow::Result<Self> {
         dotenv().ok();
         let contact = env::var("CONTACT")?;
         let user_agent = format!("MyWikiCrawler ({contact})");
@@ -41,7 +40,10 @@ impl WikipediaCrawler {
             .build()
             .context("Error creating http client")?;
 
-        Ok(Self { client })
+        Ok(Self {
+            client,
+            worker_count,
+        })
     }
 
     /// Execute the main crawl process.
@@ -63,7 +65,7 @@ impl WikipediaCrawler {
         let (title_tx, title_rx) = unbounded();
         let (next_tx, next_rx) = unbounded();
         let (stop_tx, stop_rx) = watch::channel(false);
-        let barrier = Arc::new(Barrier::new(WORKER_COUNT + 1));
+        let barrier = Arc::new(Barrier::new(self.worker_count as usize + 1));
 
         let parents = Arc::new(Mutex::new(HashMap::new()));
 
@@ -72,7 +74,7 @@ impl WikipediaCrawler {
             .await
             .context("Error sending starting title through channel")?;
 
-        for id in 0..WORKER_COUNT {
+        for id in 0..self.worker_count as usize {
             tokio::spawn(self.clone().worker(
                 id,
                 title_rx.clone(),
