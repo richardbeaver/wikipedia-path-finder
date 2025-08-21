@@ -8,7 +8,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 use titles::KEVIN_BACON;
-use tokio::{sync::watch, time::Duration};
+use tokio::{
+    sync::{watch, Barrier},
+    time::Duration,
+};
 use wiki_response::WikiResponse;
 
 const WORKER_COUNT: usize = 5;
@@ -58,11 +61,13 @@ impl WikipediaCrawler {
         }
 
         let (title_tx, title_rx) = unbounded();
+        let (next_tx, next_rx) = unbounded();
         let (stop_tx, mut stop_rx) = watch::channel(false);
+        let barrier = Arc::new(Barrier::new(WORKER_COUNT + 1));
 
         let parents = Arc::new(Mutex::new(HashMap::new()));
 
-        let mut handles = vec![];
+        // let mut handles = vec![];
 
         title_tx
             .send(start_title.to_string())
@@ -70,20 +75,35 @@ impl WikipediaCrawler {
             .context("Error sending starting title through channel")?;
 
         for id in 0..WORKER_COUNT {
-            let handle = tokio::spawn(self.clone().worker(
+            // let handle =
+            tokio::spawn(self.clone().worker(
                 id,
-                title_tx.clone(),
                 title_rx.clone(),
+                next_tx.clone(),
                 stop_tx.clone(),
                 stop_rx.clone(),
                 parents.clone(),
+                barrier.clone(),
             ));
 
-            handles.push(handle);
+            // handles.push(handle);
         }
 
-        drop(title_tx);
-        stop_rx.wait_for(|val| *val).await?;
+        // wait for coordinator to exit
+        // tokio::spawn(self.clone().coordinator(next_rx, title_tx, barrier)).await??;
+
+        let Ok(Ok(())) = tokio::spawn(
+            self.clone()
+                .coordinator(next_rx, title_tx, stop_rx, barrier),
+        )
+        .await
+        else {
+            println!("Coordinator failed");
+            return Err(anyhow::Error::msg(""));
+        };
+
+        // drop(title_tx);
+        // stop_rx.wait_for(|val| *val).await?;
 
         println!("Crawl finished.");
 
@@ -96,14 +116,54 @@ impl WikipediaCrawler {
         path.map_err(|_| anyhow::Error::msg("Could not find path to Kevin Bacon"))
     }
 
+    async fn coordinator(
+        self,
+        next_rx: Receiver<String>,
+        title_tx: Sender<String>,
+        stop_rx: watch::Receiver<bool>,
+        barrier: Arc<Barrier>,
+    ) -> anyhow::Result<()> {
+        let mut round = 0;
+
+        loop {
+            if *stop_rx.borrow() {
+                println!("[Coordinator] Stopping");
+                return Ok(());
+            }
+
+            barrier.wait().await; // Wait for workers for the round
+            round += 1;
+            println!("[Coordinator] End of round {round}");
+
+            println!("[Coordinator] Swapping titles");
+
+            // let next_frontier = next_rx.recv_blocking().into_iter().collect::<Vec<_>>();
+            let mut next_frontier = vec![];
+            while let Ok(title) = next_rx.try_recv() {
+                next_frontier.push(title);
+            }
+            println!("[Coordinator] titles collected: {}", next_frontier.len());
+
+            for title in next_frontier {
+                title_tx.send(title).await?;
+            }
+
+            println!("[Coordinator] Starting next round");
+
+            barrier.wait().await; // Start next round
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
     async fn worker(
         self,
         id: usize,
-        title_tx: Sender<String>,
         title_rx: Receiver<String>,
+        next_tx: Sender<String>,
         stop_tx: watch::Sender<bool>,
         stop_rx: watch::Receiver<bool>,
         parents: Arc<Mutex<HashMap<String, String>>>,
+        barrier: Arc<Barrier>,
     ) {
         loop {
             if *stop_rx.borrow() {
@@ -111,47 +171,47 @@ impl WikipediaCrawler {
                 return;
             }
 
-            let Ok(cur_title) = title_rx.recv().await else {
-                break;
-            };
+            // let Ok(cur_title) = title_rx.recv().await else {
+            //     break;
+            // };
 
-            println!("[Worker {id}] Crawling {cur_title}");
-
-            let linked_titles = match self.get_linked_titles(&cur_title).await {
-                Ok(linked_titles) => linked_titles,
-                Err(e) => {
-                    println!(
-                        "[Worker {id}] Failed to get linked titles for page '{cur_title}': {e}"
-                    );
-                    continue;
-                }
-            };
-
-            println!(
-                "[Worker {id}] Got linked titles for page '{cur_title}'; length: {}",
-                linked_titles.len()
-            );
-
-            for linked_title in linked_titles {
-                {
-                    let mut p = parents.lock().unwrap();
-                    if p.contains_key(&linked_title) {
+            while let Ok(cur_title) = title_rx.try_recv() {
+                let linked_titles = match self.get_linked_titles(&cur_title).await {
+                    Ok(linked_titles) => linked_titles,
+                    Err(e) => {
+                        println!(
+                            "[Worker {id}] Failed to get linked titles for page '{cur_title}': {e}"
+                        );
                         continue;
                     }
-                    p.insert(linked_title.to_string(), cur_title.to_string());
-                }
+                };
 
-                if linked_title == KEVIN_BACON {
-                    println!("[Worker {id}] Found target");
-                    let _ = stop_tx.send(true);
-                    return;
-                }
+                println!(
+                    "[Worker {id}] Got linked titles for page '{cur_title}'; length: {}",
+                    linked_titles.len()
+                );
 
-                let _ = title_tx.send(linked_title).await;
+                for linked_title in linked_titles {
+                    {
+                        let mut p = parents.lock().unwrap();
+                        if p.contains_key(&linked_title) {
+                            continue;
+                        }
+                        p.insert(linked_title.to_string(), cur_title.to_string());
+                    }
+
+                    if linked_title == KEVIN_BACON {
+                        println!("[Worker {id}] Found target");
+                        let _ = stop_tx.send(true);
+                        break;
+                    }
+
+                    let _ = next_tx.send(linked_title).await;
+                }
             }
+            barrier.wait().await; // round finished
+            barrier.wait().await; // wait for coordinator to refill queue
         }
-
-        println!("[Worker {id}] exiting");
     }
 
     /// Collect all titles linked to in the article with the given title.
