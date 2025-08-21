@@ -8,6 +8,7 @@ from titles.titles import (
     CITY_ON_A_HILL,
     AMANDA_CLAYTON,
     THE_BET,
+    CLINT_EASTWOOD,
     GT5,
     GINETTA_GT5_CHALLENGE,
     GRAN_TURISMO_5,
@@ -47,24 +48,25 @@ def test_two_hops_1(crawler: WikipediaCrawler):
 
 @pytest.mark.skip
 def test_two_hops_2(crawler: WikipediaCrawler):
-    # Runs in about 10 seconds
-    # Triggers Action API's chunked responses with `continue` field
-    #   - Faulty handling of this field results in a failure
-    result = crawler.crawl(HERBERT_ROSS)
-    assert result is not None
-    assert len(result) == 3
-    assert result[0] == HERBERT_ROSS
-    assert result[2] == KEVIN_BACON
+    # Runs in 8-9 seconds
+
+    assert crawler.crawl(HERBERT_ROSS) == [
+        HERBERT_ROSS,
+        CLINT_EASTWOOD,
+        KEVIN_BACON,
+    ]
 
 
 @pytest.mark.skip
 def test_three_hops(crawler: WikipediaCrawler):
-    # Runs in about 10 minutes
-    result = crawler.crawl(THE_BET)
-    assert result is not None
-    assert len(result) == 4
-    assert result[0] == THE_BET
-    assert result[3] == KEVIN_BACON
+    # Runs in 6-6.5 seconds
+
+    assert crawler.crawl(THE_BET) == [
+        THE_BET,
+        AMANDA_CLAYTON,
+        CITY_ON_A_HILL,
+        KEVIN_BACON,
+    ]
 
 
 def test_get_linked_titles(crawler: WikipediaCrawler):
