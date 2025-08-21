@@ -1,4 +1,4 @@
-use crawler_rs_async::WikipediaCrawler;
+use crawler_rs_async_channels::WikipediaCrawler;
 use std::sync::LazyLock;
 use titles::{
     AMANDA_CLAYTON, CITY_ON_A_HILL, FOOTLOOSE, FRIDAY_THE_13TH, GINETTA_GT5_CHALLENGE,
