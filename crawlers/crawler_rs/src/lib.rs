@@ -51,8 +51,6 @@ impl WikipediaCrawler {
         let mut parents = HashMap::new();
 
         'search: while let Some(cur_title) = queue.pop_front() {
-            println!("Crawling {cur_title}");
-
             let linked_titles = match self.get_linked_titles(&cur_title) {
                 Ok(linked_titles) => linked_titles,
                 Err(e) => {

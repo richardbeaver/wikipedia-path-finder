@@ -25,7 +25,6 @@ class WikipediaCrawler:
 
         while len(queue) != 0:
             cur_title = queue.popleft()
-            print(f"Crawling {cur_title}")
 
             try:
                 linked_titles = self.get_linked_titles(cur_title)
