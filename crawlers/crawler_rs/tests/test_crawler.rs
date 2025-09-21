@@ -1,5 +1,3 @@
-use std::sync::LazyLock;
-
 use crawler_rs::WikipediaCrawler;
 use std::sync::LazyLock;
 use titles::{
