@@ -3,21 +3,13 @@ node_modules/
 dist/
 build/
 .cache/
-.next/
 out/
 *.log
-*.tsbuildinfo
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 .env
 .env.*
 
 # === Rust ===
 **/*/target/
-**/*.rs.bk
-Cargo.lock
 
 # === Python ===
 __pycache__/
@@ -35,8 +27,6 @@ build/
 venv/
 env/
 ENV/
-pip-wheel-metadata/
-sitecustomize.py
 
 # === VS Code / JetBrains / Other Editors ===
 .vscode/
